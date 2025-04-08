@@ -34,6 +34,9 @@ namespace X4LogWatcher
           // If watching file, stop watching folder
           IsWatchingFolder = false;
         }
+
+        // Update the forced refresh enabled state
+        UpdateForcedRefreshEnabledState();
       }
     }
     private bool _isWatchingFolder = false;
@@ -49,8 +52,42 @@ namespace X4LogWatcher
           // If watching folder, stop watching file
           IsWatchingFile = false;
         }
+
+        // Update the forced refresh enabled state
+        UpdateForcedRefreshEnabledState();
       }
     }
+
+    private bool _isForcedRefreshEnabled = false;
+    public bool IsForcedRefreshEnabled
+    {
+      get => _isForcedRefreshEnabled;
+      set
+      {
+        if (value == _isForcedRefreshEnabled)
+          return;
+        _isForcedRefreshEnabled = value;
+        OnPropertyChanged(nameof(IsForcedRefreshEnabled));
+
+        if (value)
+        {
+          // Start the forced refresh timer
+          StartForcedRefresh();
+        }
+        else
+        {
+          // Stop the forced refresh timer
+          StopForcedRefresh();
+        }
+      }
+    }
+
+    // Timer for forced refresh
+    private System.Windows.Threading.DispatcherTimer? forcedRefreshTimer;
+
+    // File information for forced refresh
+    private DateTime lastModifiedTime;
+    private long lastFileSize;
 
     private string? _currentLogFile;
     private string? CurrentLogFile
@@ -128,6 +165,8 @@ namespace X4LogWatcher
       // Initialize menu items as unchecked
       menuWatchLogFile.IsChecked = false;
       menuWatchLogFolder.IsChecked = false;
+      menuForcedRefresh.IsChecked = false;
+      menuForcedRefresh.IsEnabled = false; // Initially disabled until watching starts
 
       // Load application configuration
       appConfig = Config.LoadConfig();
@@ -817,6 +856,148 @@ namespace X4LogWatcher
     private void Exit_Click(object sender, RoutedEventArgs e)
     {
       this.Close();
+    }
+
+    // Event handler for the Forced Refresh menu item click
+    private void MenuForcedRefresh_Click(object sender, RoutedEventArgs e)
+    {
+      // Toggle the forced refresh state
+      IsForcedRefreshEnabled = menuForcedRefresh.IsChecked;
+    }
+
+    // Update the enabled state of the Forced Refresh menu item based on current watch state
+    private void UpdateForcedRefreshEnabledState()
+    {
+      // Enable the menu item only if file or folder watching is active
+      menuForcedRefresh.IsEnabled = IsWatchingFile || IsWatchingFolder;
+
+      // If watching is disabled, also disable forced refresh
+      if (!IsWatchingFile && !IsWatchingFolder)
+      {
+        IsForcedRefreshEnabled = false;
+        menuForcedRefresh.IsChecked = false;
+      }
+    }
+
+    // Start the forced refresh timer
+    private void StartForcedRefresh()
+    {
+      // Stop any existing timer
+      StopForcedRefresh();
+
+      // If watching is not enabled, don't start the timer
+      if (!IsWatchingFile && !IsWatchingFolder)
+      {
+        return;
+      }
+
+      // If no file is currently selected, try to find the most recent log file in the watched folder
+      if (_currentLogFile == null && _currentLogFolder != null)
+      {
+        string? mostRecentLogFile = FindMostRecentLogFile(_currentLogFolder);
+        if (mostRecentLogFile != null)
+        {
+          _currentLogFile = mostRecentLogFile;
+          // Don't call StartWatching here as it would set up file watchers
+          // Just update the UI
+          CurrentLogFile = mostRecentLogFile;
+        }
+        else
+        {
+          // No log file found, can't start forced refresh
+          MessageBox.Show("No log files found in the watched folder.", "Forced Refresh", MessageBoxButton.OK, MessageBoxImage.Information);
+          IsForcedRefreshEnabled = false;
+          return;
+        }
+      }
+
+      if (_currentLogFile == null || !File.Exists(_currentLogFile))
+      {
+        // Can't start forced refresh without a valid file
+        MessageBox.Show(
+          "No valid log file available for forced refresh.",
+          "Forced Refresh",
+          MessageBoxButton.OK,
+          MessageBoxImage.Information
+        );
+        IsForcedRefreshEnabled = false;
+        return;
+      }
+
+      // Store the current file information
+      var fileInfo = new FileInfo(_currentLogFile);
+      lastModifiedTime = fileInfo.LastWriteTime;
+      lastFileSize = fileInfo.Length;
+
+      // Process all enabled tabs once to ensure we have the latest content
+      ProcessAllEnabledTabs();
+
+      // Create and start the timer for periodic checks
+      forcedRefreshTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+      forcedRefreshTimer.Tick += OnForcedRefreshTimerTick;
+      forcedRefreshTimer.Start();
+    }
+
+    // Stop the forced refresh timer
+    private void StopForcedRefresh()
+    {
+      if (forcedRefreshTimer != null)
+      {
+        forcedRefreshTimer.Stop();
+        forcedRefreshTimer.Tick -= OnForcedRefreshTimerTick;
+        forcedRefreshTimer = null;
+      }
+    }
+
+    // Timer tick handler for forced refresh
+    private void OnForcedRefreshTimerTick(object? sender, EventArgs e)
+    {
+      if (_currentLogFile == null || !File.Exists(_currentLogFile))
+      {
+        // File no longer exists, stop the timer
+        StopForcedRefresh();
+        IsForcedRefreshEnabled = false;
+        menuForcedRefresh.IsChecked = false;
+        return;
+      }
+
+      try
+      {
+        // Check if the file has changed
+        var fileInfo = new FileInfo(_currentLogFile);
+        bool hasChanged = fileInfo.LastWriteTime != lastModifiedTime || fileInfo.Length != lastFileSize;
+
+        if (hasChanged)
+        {
+          // Update stored file information
+          lastModifiedTime = fileInfo.LastWriteTime;
+          lastFileSize = fileInfo.Length;
+
+          // Simulate the file change event
+          Dispatcher.Invoke(() =>
+          {
+            // Process each tab based on its watching state
+            foreach (var tab in tabs)
+            {
+              if (tab.IsWatchingEnabled)
+              {
+                // If watching is enabled, process the content now
+                ProcessTabContent(tab);
+              }
+              else
+              {
+                // If watching is disabled, just mark the file changed flag
+                tab.FileChangedFlag = true;
+              }
+            }
+          });
+        }
+      }
+      catch (Exception ex)
+      {
+        // Handle any exceptions during the check
+        Console.WriteLine($"Error during forced refresh: {ex.Message}");
+      }
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

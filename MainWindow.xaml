@@ -49,6 +49,11 @@
                       IsCheckable="True"
                       IsChecked="{Binding IsWatchingFolder}"
                       Click="BtnSelectFolder_Click"/>
+            <MenuItem x:Name="menuForcedRefresh"
+                      Header="Forced Refresh"
+                      IsCheckable="True"
+                      IsChecked="{Binding IsForcedRefreshEnabled}"
+                      Click="MenuForcedRefresh_Click"/>
 
             <!-- Right-aligned Exit menu item -->
             <MenuItem x:Name="menuExit"
