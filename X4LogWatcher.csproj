@@ -7,6 +7,7 @@
     <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <StartupObject>X4LogWatcher.App</StartupObject>
+    <ApplicationIcon>docs\images\x4logwatcher.ico</ApplicationIcon>
     <Version>$(Version)</Version>
     <AssemblyVersion>$(Version)</AssemblyVersion>
     <FileVersion>$(Version)</FileVersion>
@@ -17,6 +18,10 @@
 
   <ItemGroup>
     <PackageReference Include="MahApps.Metro" Version="2.4.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="docs\images\x4logwatcher.ico" />
   </ItemGroup>
 
 </Project>

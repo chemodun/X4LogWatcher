@@ -11,6 +11,9 @@
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml" />
                 <ResourceDictionary Source="pack://application:,,,/MahApps.Metro;component/Styles/Themes/Light.Blue.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Application icon -->
+            <BitmapImage x:Key="AppIcon" UriSource="/docs/images/x4logwatcher.ico" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

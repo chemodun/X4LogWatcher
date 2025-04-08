@@ -10,6 +10,7 @@
                       Height="600"
                       Width="800"
                       GlowBrush="{DynamicResource MahApps.Brushes.Accent}"
+                      Icon="/docs/images/x4logwatcher.ico"
                       ResizeMode="CanResizeWithGrip">
     <DockPanel>
         <!-- Menu with DockPanel to position Exit at right -->
