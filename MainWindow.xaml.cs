@@ -17,7 +17,6 @@ namespace X4LogWatcher
   public partial class MainWindow : MetroWindow, INotifyPropertyChanged
   {
     private string? logFolderPath;
-    private string? profileFolderPath;
     private FileSystemWatcher? fileWatcher;
     private FileSystemWatcher? folderWatcher;
 
@@ -442,7 +441,7 @@ namespace X4LogWatcher
       contentPanel.Child = txtContent;
 
       // Create and store TabInfo object
-      var tabInfo = new TabInfo(tabItem, txtRegex, chkEnable, txtContent, regexPattern, isEnabled);
+      var tabInfo = new TabInfo(tabItem, chkEnable, txtName, txtRegex, txtContent, regexPattern, isEnabled);
       tabs.Add(tabInfo);
 
       // Set up Apply button click handler using the TabInfo object

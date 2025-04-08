@@ -78,7 +78,7 @@ namespace X4LogWatcher
     // UI controls
     public MetroTabItem TabItem { get; }
     public TextBox RegexTextBox { get; }
-    public TextBox NameTextBox { get; } // New property for tab name textbox
+    public TextBox? NameTextBox { get; } // New property for tab name textbox, made nullable
     public CheckBox WatchingCheckBox { get; }
     public TextBox ContentTextBox { get; }
 
@@ -96,8 +96,9 @@ namespace X4LogWatcher
     /// </summary>
     public TabInfo(
       MetroTabItem tabItem,
-      TextBox regexTextBox,
       CheckBox watchingCheckBox,
+      TextBox nameTextBox,
+      TextBox regexTextBox,
       TextBox contentTextBox,
       string pattern,
       bool enabled
@@ -107,20 +108,7 @@ namespace X4LogWatcher
       RegexTextBox = regexTextBox;
       WatchingCheckBox = watchingCheckBox;
       ContentTextBox = contentTextBox;
-
-      // Find the name textbox in the first row by looping through the tab content
-      if (tabItem.Content is Grid mainGrid && mainGrid.Children.Count > 0 && mainGrid.Children[0] is DockPanel firstRowPanel)
-      {
-        foreach (var child in firstRowPanel.Children)
-        {
-          if (child is TextBox nameTextBox)
-          {
-            NameTextBox = nameTextBox;
-            TabName = nameTextBox.Text;
-            break;
-          }
-        }
-      }
+      NameTextBox = nameTextBox;
 
       RegexPattern = pattern;
       IsWatchingEnabled = enabled;
@@ -139,11 +127,7 @@ namespace X4LogWatcher
       // Wire up events
       RegexTextBox.TextChanged += RegexTextBox_TextChanged;
 
-      // If we found a name textbox, wire up its events
-      if (NameTextBox != null)
-      {
-        NameTextBox.TextChanged += NameTextBox_TextChanged;
-      }
+      NameTextBox.TextChanged += NameTextBox_TextChanged;
 
       WatchingCheckBox.Checked += (sender, e) => IsWatchingEnabled = true;
       WatchingCheckBox.Unchecked += (sender, e) => IsWatchingEnabled = false;
