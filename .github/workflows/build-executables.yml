@@ -1,0 +1,60 @@
+name: Build Executables
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set dotnet SDK
+      - name: Setup dotnet SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: dotnet restore
+
+      # Step 4: Build Executables
+      - name: Build
+        run:  dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
+
+      # Step 5: Compress to zip
+      - name: Compress to zip
+        run: |
+          mkdir -p X4LogWatcher
+          cp -r bin\Release\net8.0-windows\win-x64\publish\*.* X4LogWatcher
+          7z a -tzip X4LogWatcher.zip X4LogWatcher
+        shell: powershell
+
+      # Step 6: Attach Archive to Release
+      - name: Attach Windows Diff and Patch Archive to Release
+        uses: softprops/action-gh-release@v2
+        if: ${{ github.event_name == 'release' }}
+        with:
+          files: X4LogWatcher.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.MY_RELEASE_PLEASE_TOKEN }}
+
+      # Step 7: Scan with VirusTotal
+      -
+        name: VirusTotal Scan
+        uses: crazy-max/ghaction-virustotal@v4
+        with:
+          update_release_body: true
+          vt_api_key: ${{ secrets.VT_API_KEY }}
+          github_token: ${{ secrets.MY_RELEASE_PLEASE_TOKEN }}
+          request_rate: 4
+          files: |
+            ${{ github.event_name == 'release' && '.zip$' || '*.zip' }}
