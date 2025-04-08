@@ -780,21 +780,7 @@ namespace X4LogWatcher
                 // Check if line matches regex
                 if (tab.CompiledRegex != null && tab.CompiledRegex.IsMatch(line))
                 {
-                  var match = tab.CompiledRegex.Match(line);
-
-                  // Handle line with its matched groups
-                  if (match.Groups.Count > 1)
-                  {
-                    sb.AppendLine(line);
-                    for (int i = 1; i < match.Groups.Count; i++)
-                    {
-                      sb.AppendLine($"  Group {i}: {match.Groups[i].Value}");
-                    }
-                  }
-                  else
-                  {
-                    sb.AppendLine(line);
-                  }
+                  sb.AppendLine(line);
                 }
               }
 
