@@ -1,0 +1,29 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+
+      -
+        name: Checkout repository
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: Release Please Action
+        uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          # release-type: simple
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          token: ${{ secrets.MY_RELEASE_PLEASE_TOKEN }}

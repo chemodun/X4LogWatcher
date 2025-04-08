@@ -1,0 +1,78 @@
+<Controls:MetroWindow x:Class="X4LogWatcher.MainWindow"
+                      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                      xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
+                      xmlns:local="clr-namespace:X4LogWatcher"
+                      mc:Ignorable="d"
+                      Title="{Binding TitleText}"
+                      Height="600"
+                      Width="800"
+                      GlowBrush="{DynamicResource MahApps.Brushes.Accent}"
+                      ResizeMode="CanResizeWithGrip">
+    <DockPanel>
+        <!-- Menu with DockPanel to position Exit at right -->
+        <Menu DockPanel.Dock="Top">
+            <Menu.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <DockPanel HorizontalAlignment="Stretch"/>
+                </ItemsPanelTemplate>
+            </Menu.ItemsPanel>
+
+            <MenuItem x:Name="menuProfile"
+                      Header="Profiles"
+                      HorizontalAlignment="Left"
+                      Width="Auto">
+                <MenuItem x:Name="menuSaveProfile"
+                          Header="Save Profile..."
+                          Click="MenuSaveProfile_Click"/>
+                <MenuItem x:Name="menuLoadProfile"
+                          Header="Load Profile..."
+                          Click="MenuLoadProfile_Click"/>
+                <Separator/>
+                <!-- Recent profiles section - will be populated dynamically -->
+                <MenuItem x:Name="menuRecentProfilesHeader"
+                          Header="Recent Profiles"
+                          IsEnabled="False"/>
+                <!-- Placeholder for recent profile items that will be added programmatically -->
+            </MenuItem>
+
+            <!-- Left-aligned menu items -->
+            <MenuItem x:Name="menuWatchLogFile"
+                      Header="Watch File"
+                      IsCheckable="True"
+                      IsChecked="{Binding IsWatchingFile}"
+                      Click="BtnSelectFile_Click"/>
+            <MenuItem x:Name="menuWatchLogFolder"
+                      Header="Watch Folder"
+                      IsCheckable="True"
+                      IsChecked="{Binding IsWatchingFolder}"
+                      Click="BtnSelectFolder_Click"/>
+
+            <!-- Right-aligned Exit menu item -->
+            <MenuItem x:Name="menuExit"
+                      Header="Exit"
+                      Click="Exit_Click"
+                      HorizontalAlignment="Right"
+                      Width="Auto"
+                      DockPanel.Dock="Right"/>
+        </Menu>
+
+        <!-- Tab Control with special Add Tab button -->
+        <Controls:MetroAnimatedTabControl x:Name="tabControl"
+                                          Margin="5">
+            <!-- Special Add Tab button that will always be shown as the last tab -->
+            <Controls:MetroTabItem x:Name="addTabButton"
+                                   Header="+"
+                                   Width="40"
+                                   MouseLeftButtonUp="AddTabButton_MouseLeftButtonUp"
+                                   CloseButtonEnabled="False">
+                <!-- Explicitly set content to empty -->
+                <Grid></Grid>
+            </Controls:MetroTabItem>
+
+            <!-- Regular tabs will be inserted before this Add tab programmatically -->
+        </Controls:MetroAnimatedTabControl>
+    </DockPanel>
+</Controls:MetroWindow>
