@@ -7,10 +7,12 @@ X4 Log Watcher is a simple tool to monitor the log files of X4: Foundations. It 
 - Real-time log monitoring
 - Filter log entries by regular expressions
 - Multi-tabbed interface for filtering the same log file
+- Enable/disable filters on the fly per each tab
 - Watch not only the exact log file but also the parent directory to reload the log file when new log files are created
 - Support profiles saving and loading - i.e. current tabs with filters
 - Offline mode - i.e. load the log file from disk and parse it
 - Loading default profile on startup
+- Support a "Forced refresh" mode, if by some reason standard Windows file watcher doesn't work
 
 ## Requirements
 
@@ -40,6 +42,12 @@ To use X4 Log Watcher, follow these steps:
 
 ![Common errors parsing](docs/images/common_errors_parsing.png)
 ![Exact ship monitoring](docs/images/exact_ship_monitoring.png)
+
+## Known Issues
+
+In some cases, the application may not detect changes in the log file. If this happens, you can enable the "Forced refresh" mode in the menu. This will force the application to check for changes in the log file at regular intervals.
+
+Will work in case if any `watch mode` is enabled.
 
 ## Contributing
 
