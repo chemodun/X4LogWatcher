@@ -159,10 +159,10 @@ namespace X4LogWatcher
         // Save the selected folder path to config
         appConfig.LastLogFolderPath = Path.GetDirectoryName(selectedFile);
 
-        // Start watching the selected file
-        StartWatching(selectedFile);
         CurrentLogFolder = null;
         IsWatchingFile = true;
+        // Start watching the selected file
+        StartWatching(selectedFile);
       }
       else
       {
