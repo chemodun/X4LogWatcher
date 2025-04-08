@@ -1,0 +1,12 @@
+{
+    "dotnet.defaultSolution": "X4LogWatcher.sln",
+    "dotnet.server.useOmnisharp": true,
+    "csharp.format.enable": true,
+    "dotnet.preferCSharpExtension": true,
+    "editor.formatOnSave": false,
+    // Enable per-language
+    "[csharp]": {
+	"editor.formatOnSave": true,
+	"editor.defaultFormatter": "csharpier.csharpier-vscode"
+    }
+}
