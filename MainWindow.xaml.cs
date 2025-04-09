@@ -503,6 +503,10 @@ namespace X4LogWatcher
         VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
         HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
       };
+
+      // Add Enter key handling for search navigation when content box has focus
+      txtContent.KeyDown += ContentBox_KeyDown;
+
       contentPanel.Child = txtContent;
 
       // Create and store TabInfo object
@@ -532,6 +536,24 @@ namespace X4LogWatcher
       int addButtonIndex = tabControl.Items.IndexOf(addTabButton);
       tabControl.Items.Insert(addButtonIndex, tabItem);
       tabControl.SelectedItem = tabItem;
+    }
+
+    private void ContentBox_KeyDown(object sender, KeyEventArgs e)
+    {
+      if (e.Key == Key.Enter && findPanel.Visibility == Visibility.Visible)
+      {
+        // When Enter is pressed in content box and search panel is visible,
+        // use the same behavior as F3 to find the next occurrence
+        if (Keyboard.Modifiers == ModifierKeys.Shift)
+        {
+          FindPrevious();
+        }
+        else
+        {
+          FindNext();
+        }
+        e.Handled = true;
+      }
     }
 
     private void CloseTab(TabInfo tabInfo)
