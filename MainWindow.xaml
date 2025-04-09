@@ -65,6 +65,15 @@
                       DockPanel.Dock="Right"/>
         </Menu>
 
+        <!-- Find Panel - Initially Hidden -->
+        <DockPanel x:Name="findPanel" DockPanel.Dock="Top" Visibility="Collapsed" Background="{DynamicResource MahApps.Brushes.Gray10}">
+            <Button x:Name="btnCloseFindPanel" DockPanel.Dock="Right" Content="×" Width="24" Height="24" Margin="2" Click="BtnCloseFindPanel_Click"/>
+            <Button x:Name="btnFindPrevious" DockPanel.Dock="Right" Content="▲" Width="24" Height="24" Margin="2" Click="BtnFindPrevious_Click" ToolTip="Find Previous (Shift+F3)"/>
+            <Button x:Name="btnFindNext" DockPanel.Dock="Right" Content="▼" Width="24" Height="24" Margin="2" Click="BtnFindNext_Click" ToolTip="Find Next (F3)"/>
+            <CheckBox x:Name="chkMatchCase" DockPanel.Dock="Right" Content="Match case" VerticalAlignment="Center" Margin="5,0" Checked="FindOptions_Changed" Unchecked="FindOptions_Changed"/>
+            <TextBox x:Name="txtFindText" Margin="5,2" VerticalAlignment="Center" TextChanged="TxtFindText_TextChanged" KeyDown="TxtFindText_KeyDown" MinWidth="150"/>
+        </DockPanel>
+
         <!-- Tab Control with special Add Tab button -->
         <Controls:MetroAnimatedTabControl x:Name="tabControl"
                                           Margin="5">

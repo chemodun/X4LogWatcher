@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using MahApps.Metro.Controls;
@@ -151,6 +152,11 @@ namespace X4LogWatcher
     // Configuration object to store recent profiles
     private Config appConfig;
 
+    // Search functionality
+    private int currentSearchPosition = -1;
+    private List<int> searchResultPositions = new List<int>();
+    private TabInfo? currentSearchTab = null;
+
     public MainWindow()
     {
       InitializeComponent();
@@ -177,6 +183,39 @@ namespace X4LogWatcher
       if (!string.IsNullOrEmpty(appConfig.ActiveProfile) && File.Exists(appConfig.ActiveProfile))
       {
         LoadProfile(appConfig.ActiveProfile);
+      }
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+      base.OnKeyDown(e);
+
+      // Handle Ctrl+F to open search
+      if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
+      {
+        ShowFindPanel();
+        e.Handled = true;
+      }
+
+      // Handle F3 to find next
+      if (e.Key == Key.F3)
+      {
+        if (Keyboard.Modifiers == ModifierKeys.Shift)
+        {
+          FindPrevious();
+        }
+        else
+        {
+          FindNext();
+        }
+        e.Handled = true;
+      }
+
+      // Handle Escape to close find panel
+      if (e.Key == Key.Escape && findPanel.Visibility == Visibility.Visible)
+      {
+        CloseFindPanel();
+        e.Handled = true;
       }
     }
 
@@ -983,6 +1022,208 @@ namespace X4LogWatcher
         // Handle any exceptions during the check
         Console.WriteLine($"Error during forced refresh: {ex.Message}");
       }
+    }
+
+    // Find functionality methods
+    private void ShowFindPanel()
+    {
+      // Get active tab
+      if (tabControl.SelectedItem is MetroTabItem selectedTabItem && selectedTabItem != addTabButton)
+      {
+        // Show the find panel
+        findPanel.Visibility = Visibility.Visible;
+
+        // Clear previous search results
+        searchResultPositions.Clear();
+        currentSearchPosition = -1;
+
+        // Focus the search text box
+        txtFindText.Focus();
+        txtFindText.SelectAll();
+      }
+    }
+
+    private void CloseFindPanel()
+    {
+      findPanel.Visibility = Visibility.Collapsed;
+      ClearSearchHighlights();
+    }
+
+    private void TxtFindText_TextChanged(object sender, TextChangedEventArgs e)
+    {
+      // No longer perform immediate search on text change
+      if (string.IsNullOrEmpty(txtFindText.Text))
+      {
+        ClearSearchHighlights();
+      }
+    }
+
+    private void TxtFindText_KeyDown(object sender, KeyEventArgs e)
+    {
+      if (e.Key == Key.Enter)
+      {
+        // Perform search when Enter is pressed
+        PerformSearch();
+
+        if (searchResultPositions.Count > 0)
+        {
+          // Then perform navigation based on Shift modifier
+          if (Keyboard.Modifiers == ModifierKeys.Shift)
+          {
+            FindPrevious();
+          }
+          else
+          {
+            FindNext();
+          }
+        }
+        e.Handled = true;
+      }
+      else if (e.Key == Key.Escape)
+      {
+        CloseFindPanel();
+        e.Handled = true;
+      }
+    }
+
+    private void BtnCloseFindPanel_Click(object sender, RoutedEventArgs e)
+    {
+      CloseFindPanel();
+    }
+
+    private void BtnFindNext_Click(object sender, RoutedEventArgs e)
+    {
+      FindNext();
+    }
+
+    private void BtnFindPrevious_Click(object sender, RoutedEventArgs e)
+    {
+      FindPrevious();
+    }
+
+    private void FindOptions_Changed(object sender, RoutedEventArgs e)
+    {
+      PerformSearch();
+    }
+
+    private void PerformSearch()
+    {
+      // Get the active tab's content TextBox
+      if (tabControl.SelectedItem is MetroTabItem selectedTabItem && selectedTabItem != addTabButton)
+      {
+        var tabInfo = tabs.FirstOrDefault(t => t.TabItem == selectedTabItem);
+        if (tabInfo != null && !string.IsNullOrEmpty(txtFindText.Text))
+        {
+          // Update current search tab
+          currentSearchTab = tabInfo;
+
+          // Clear previous search results
+          searchResultPositions.Clear();
+          currentSearchPosition = -1;
+
+          // Get the text and search term
+          string content = tabInfo.ContentTextBox.Text;
+          string searchTerm = txtFindText.Text;
+
+          // Get comparison type based on match case checkbox
+          StringComparison comparison = chkMatchCase.IsChecked == true ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+
+          // Find all occurrences
+          int index = 0;
+          while ((index = content.IndexOf(searchTerm, index, comparison)) >= 0)
+          {
+            // Add position to results
+            searchResultPositions.Add(index);
+
+            // Move index forward
+            index += searchTerm.Length;
+          }
+
+          // Set initial position and highlight first result
+          if (searchResultPositions.Count > 0)
+          {
+            currentSearchPosition = 0;
+            HighlightCurrentResult();
+          }
+        }
+      }
+    }
+
+    private void FindNext()
+    {
+      if (currentSearchTab == null || searchResultPositions.Count == 0)
+      {
+        PerformSearch();
+        return;
+      }
+
+      // Move to next result
+      currentSearchPosition = (currentSearchPosition + 1) % searchResultPositions.Count;
+      HighlightCurrentResult();
+    }
+
+    private void FindPrevious()
+    {
+      if (currentSearchTab == null || searchResultPositions.Count == 0)
+      {
+        PerformSearch();
+        return;
+      }
+
+      // Move to previous result
+      currentSearchPosition = (currentSearchPosition - 1 + searchResultPositions.Count) % searchResultPositions.Count;
+      HighlightCurrentResult();
+    }
+
+    private void HighlightCurrentResult()
+    {
+      if (
+        currentSearchTab == null
+        || searchResultPositions.Count == 0
+        || currentSearchPosition < 0
+        || currentSearchPosition >= searchResultPositions.Count
+      )
+        return;
+
+      // Get position and length
+      int startIndex = searchResultPositions[currentSearchPosition];
+      int length = txtFindText.Text.Length;
+
+      // Select the text in the TextBox to highlight it
+      TextBox contentBox = currentSearchTab.ContentTextBox;
+      contentBox.Focus();
+      contentBox.Select(startIndex, length);
+
+      // Ensure the highlighted text is visible by scrolling to its line
+      contentBox.ScrollToLine(GetLineIndexFromPosition(contentBox.Text, startIndex));
+
+      // Update status information if available (e.g., "Match 3 of 10")
+      string statusInfo = $"Match {currentSearchPosition + 1} of {searchResultPositions.Count}";
+    }
+
+    private void ClearSearchHighlights()
+    {
+      if (currentSearchTab != null)
+      {
+        currentSearchTab.ContentTextBox.SelectionLength = 0;
+      }
+    }
+
+    // Helper method to get line index from character position
+    private int GetLineIndexFromPosition(string text, int position)
+    {
+      int lineIndex = 0;
+      int currentPos = 0;
+
+      foreach (char c in text.Take(position))
+      {
+        if (c == '\n')
+          lineIndex++;
+
+        currentPos++;
+      }
+
+      return lineIndex;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
