@@ -55,9 +55,10 @@ In some cases, the application may not detect changes in the log file. If this h
 Will work in case if any [b]watch mode[/b] is enabled.
 
 [size=3][u][b]Links[/b][/u][/size]
-
-Short demo video on YouTube: [url=https://youtube.com/watch?v=6cPAfx4gxTA]X4 Log Watcher Demo[/url].
-
+[list]
+[*] Short demo video on YouTube: [url=https://youtube.com/watch?v=6cPAfx4gxTA]X4 Log Watcher Demo[/url].
+[*] There is a topic on the [url=https://forum.egosoft.com/viewtopic.php?t=470624]Egosoft forum[/url], related to this tool.
+[/list]
 [size=3][u][b]Contributing[/b][/u][/size]
 
 Contributions are welcome! If you have suggestions for improvements or new features, please open an issue or submit a pull request.
