@@ -49,6 +49,10 @@ In some cases, the application may not detect changes in the log file. If this h
 
 Will work in case if any `watch mode` is enabled.
 
+## Links
+
+Short demo video on YouTube: [X4 Log Watcher Demo](https://youtube.com/watch?v=6cPAfx4gxTA).
+
 ## Contributing
 
 Contributions are welcome! If you have suggestions for improvements or new features, please open an issue or submit a pull request.
