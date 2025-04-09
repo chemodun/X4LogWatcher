@@ -82,6 +82,17 @@ namespace X4LogWatcher
       }
     }
 
+    private string _statusLineFileInfo = "No file is watched.";
+    public string StatusLineFileInfo
+    {
+      get => _statusLineFileInfo;
+      set
+      {
+        _statusLineFileInfo = value;
+        OnPropertyChanged(nameof(StatusLineFileInfo));
+      }
+    }
+
     // Timer for forced refresh
     private System.Windows.Threading.DispatcherTimer? forcedRefreshTimer;
 
@@ -109,6 +120,7 @@ namespace X4LogWatcher
         {
           TitleText += $" - {(_currentLogFolder != null ? Path.GetFileName(value) : value)}";
         }
+        UpdateFileStatus();
       }
     }
     private string? _currentLogFolder;
@@ -127,6 +139,7 @@ namespace X4LogWatcher
         {
           TitleText = titlePrefix;
         }
+        UpdateFileStatus();
       }
     }
 
@@ -143,18 +156,18 @@ namespace X4LogWatcher
     }
 
     // Replace dictionary with TabInfo collection
-    private readonly List<TabInfo> tabs = new List<TabInfo>();
+    private readonly List<TabInfo> tabs = [];
 
     // Command to close tabs
     private ICommand? _closeTabCommand;
     public ICommand CloseTabCommand => _closeTabCommand ??= new RelayCommand<string>(CloseTabByPattern);
 
     // Configuration object to store recent profiles
-    private Config appConfig;
+    private readonly Config appConfig;
 
     // Search functionality
     private int currentSearchPosition = -1;
-    private List<int> searchResultPositions = new List<int>();
+    private readonly List<int> searchResultPositions = [];
     private TabInfo? currentSearchTab = null;
 
     public MainWindow()
@@ -172,6 +185,9 @@ namespace X4LogWatcher
       menuWatchLogFolder.IsChecked = false;
       menuForcedRefresh.IsChecked = false;
       menuForcedRefresh.IsEnabled = false; // Initially disabled until watching starts
+
+      // Initialize the status bar
+      UpdateFileStatus();
 
       // Load application configuration
       appConfig = Config.LoadConfig();
@@ -221,13 +237,12 @@ namespace X4LogWatcher
 
     private void BtnSelectFile_Click(object sender, RoutedEventArgs e)
     {
-      OpenFileDialog openFileDialog = new OpenFileDialog
+      OpenFileDialog openFileDialog = new()
       {
         Filter = "Log files (*.log)|*.log|All files (*.*)|*.*",
         Title = "Select Log File",
+        InitialDirectory = InitialFolderToSelect(),
       };
-
-      openFileDialog.InitialDirectory = InitialFolderToSelect();
       if (openFileDialog.ShowDialog() == true)
       {
         // Handle file selection
@@ -238,8 +253,12 @@ namespace X4LogWatcher
 
         CurrentLogFolder = null;
         IsWatchingFile = true;
+
         // Start watching the selected file
-        StartWatching(selectedFile);
+        Dispatcher.Invoke(() =>
+        {
+          StartWatching(selectedFile);
+        });
       }
       else
       {
@@ -259,9 +278,12 @@ namespace X4LogWatcher
     private void BtnSelectFolder_Click(object sender, RoutedEventArgs e)
     {
       // Create a new OpenFolderDialog (native WPF)
-      var dialog = new OpenFolderDialog { Title = "Select Log Folder", Multiselect = false };
-
-      dialog.InitialDirectory = InitialFolderToSelect();
+      var dialog = new OpenFolderDialog
+      {
+        Title = "Select Log Folder",
+        Multiselect = false,
+        InitialDirectory = InitialFolderToSelect(),
+      };
 
       if (dialog.ShowDialog() == true)
       {
@@ -270,6 +292,10 @@ namespace X4LogWatcher
 
         // Save the selected folder path to config
         appConfig.LastLogFolderPath = logFolderPath;
+
+        // Update folder info and status line immediately
+        _currentLogFolder = dialog.FolderName;
+        UpdateFileStatus();
 
         // Start watching the folder for all log files and new log files
         IsWatchingFolder = true;
@@ -593,7 +619,7 @@ namespace X4LogWatcher
           && menuItem != menuSaveProfile
           && menuItem != menuLoadProfile
           && menuItem != menuRecentProfilesHeader
-          && !(item is Separator)
+          && item is not Separator
         )
         {
           menuProfile.Items.Remove(item);
@@ -669,10 +695,7 @@ namespace X4LogWatcher
 
     private void StartWatching(string filePath)
     {
-      if (fileWatcher != null)
-      {
-        fileWatcher.Dispose();
-      }
+      fileWatcher?.Dispose();
 
       // Store the previous file path before updating
       string? previousLogFile = _currentLogFile;
@@ -680,6 +703,8 @@ namespace X4LogWatcher
 
       // Update the current file path
       CurrentLogFile = filePath;
+
+      UpdateFileStatus();
 
       // Set up new file watcher
       string? directoryPath = Path.GetDirectoryName(filePath);
@@ -739,6 +764,9 @@ namespace X4LogWatcher
       {
         Dispatcher.Invoke(() =>
         {
+          // Update the file status in the status bar
+          UpdateFileStatus();
+
           // Process each tab based on its watching state
           foreach (var tab in tabs)
           {
@@ -771,7 +799,7 @@ namespace X4LogWatcher
       }
     }
 
-    private string? FindMostRecentLogFile(string folderPath)
+    private static string? FindMostRecentLogFile(string folderPath)
     {
       try
       {
@@ -793,45 +821,41 @@ namespace X4LogWatcher
 
       try
       {
-        using (var stream = new FileStream(_currentLogFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        using var stream = new FileStream(_currentLogFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        // Check if we need to process from the beginning
+        bool processFromBeginning = tab.FilePosition == 0;
+
+        // If there's new content since last read
+        if (stream.Length > tab.FilePosition || processFromBeginning)
         {
-          // Check if we need to process from the beginning
-          bool processFromBeginning = tab.FilePosition == 0;
+          // Position the stream at the right place
+          stream.Seek(tab.FilePosition, SeekOrigin.Begin);
 
-          // If there's new content since last read
-          if (stream.Length > tab.FilePosition || processFromBeginning)
+          using var reader = new StreamReader(stream);
+          var sb = new StringBuilder();
+          string? line;
+          int lineCount = 0;
+
+          // Process file line by line
+          while ((line = reader.ReadLine()) != null)
           {
-            // Position the stream at the right place
-            stream.Seek(tab.FilePosition, SeekOrigin.Begin);
+            lineCount++;
 
-            using (var reader = new StreamReader(stream))
+            // Check if line matches regex
+            if (tab.CompiledRegex != null && tab.CompiledRegex.IsMatch(line))
             {
-              var sb = new StringBuilder();
-              string? line;
-              int lineCount = 0;
-
-              // Process file line by line
-              while ((line = reader.ReadLine()) != null)
-              {
-                lineCount++;
-
-                // Check if line matches regex
-                if (tab.CompiledRegex != null && tab.CompiledRegex.IsMatch(line))
-                {
-                  sb.AppendLine(line);
-                }
-              }
-
-              // Append new matches to existing content
-              if (sb.Length > 0)
-              {
-                tab.AppendContent(sb.ToString());
-              }
-
-              // Store new position
-              tab.FilePosition = stream.Length;
+              sb.AppendLine(line);
             }
           }
+
+          // Append new matches to existing content
+          if (sb.Length > 0)
+          {
+            tab.AppendContent(sb.ToString());
+          }
+
+          // Store new position
+          tab.FilePosition = stream.Length;
         }
       }
       catch (Exception ex)
@@ -842,7 +866,7 @@ namespace X4LogWatcher
 
     private void MenuSaveProfile_Click(object sender, RoutedEventArgs e)
     {
-      SaveFileDialog saveDialog = new SaveFileDialog
+      SaveFileDialog saveDialog = new()
       {
         Filter = "Profile files (*.profile)|*.profile|All files (*.*)|*.*",
         Title = "Save Profile",
@@ -862,11 +886,7 @@ namespace X4LogWatcher
 
     private void MenuLoadProfile_Click(object sender, RoutedEventArgs e)
     {
-      OpenFileDialog openDialog = new OpenFileDialog
-      {
-        Filter = "Profile files (*.profile)|*.profile|All files (*.*)|*.*",
-        Title = "Load Profile",
-      };
+      OpenFileDialog openDialog = new() { Filter = "Profile files (*.profile)|*.profile|All files (*.*)|*.*", Title = "Load Profile" };
 
       if (openDialog.ShowDialog() == true)
       {
@@ -1047,6 +1067,7 @@ namespace X4LogWatcher
     {
       findPanel.Visibility = Visibility.Collapsed;
       ClearSearchHighlights();
+      ClearSearchStatus();
     }
 
     private void TxtFindText_TextChanged(object sender, TextChangedEventArgs e)
@@ -1055,6 +1076,7 @@ namespace X4LogWatcher
       if (string.IsNullOrEmpty(txtFindText.Text))
       {
         ClearSearchHighlights();
+        ClearSearchStatus();
       }
     }
 
@@ -1145,6 +1167,7 @@ namespace X4LogWatcher
             currentSearchPosition = 0;
             HighlightCurrentResult();
           }
+          UpdateSearchStatus();
         }
       }
     }
@@ -1160,6 +1183,7 @@ namespace X4LogWatcher
       // Move to next result
       currentSearchPosition = (currentSearchPosition + 1) % searchResultPositions.Count;
       HighlightCurrentResult();
+      UpdateSearchStatus();
     }
 
     private void FindPrevious()
@@ -1173,6 +1197,7 @@ namespace X4LogWatcher
       // Move to previous result
       currentSearchPosition = (currentSearchPosition - 1 + searchResultPositions.Count) % searchResultPositions.Count;
       HighlightCurrentResult();
+      UpdateSearchStatus();
     }
 
     private void HighlightCurrentResult()
@@ -1197,8 +1222,8 @@ namespace X4LogWatcher
       // Ensure the highlighted text is visible by scrolling to its line
       contentBox.ScrollToLine(GetLineIndexFromPosition(contentBox.Text, startIndex));
 
-      // Update status information if available (e.g., "Match 3 of 10")
-      string statusInfo = $"Match {currentSearchPosition + 1} of {searchResultPositions.Count}";
+      // Update status information in the status bar
+      UpdateSearchStatus();
     }
 
     private void ClearSearchHighlights()
@@ -1210,7 +1235,7 @@ namespace X4LogWatcher
     }
 
     // Helper method to get line index from character position
-    private int GetLineIndexFromPosition(string text, int position)
+    private static int GetLineIndexFromPosition(string text, int position)
     {
       int lineIndex = 0;
       int currentPos = 0;
@@ -1224,6 +1249,59 @@ namespace X4LogWatcher
       }
 
       return lineIndex;
+    }
+
+    // Status bar methods
+    private void UpdateFileStatus()
+    {
+      try
+      {
+        if (_currentLogFile != null && File.Exists(_currentLogFile))
+        {
+          var fileInfo = new FileInfo(_currentLogFile);
+          string fileName = Path.GetFileName(_currentLogFile);
+          string lastUpdate = $"Last updated: {fileInfo.LastWriteTime:HH:mm:ss}";
+          string fileSize = $"Size: {(fileInfo.Length / 1024.0):N1} KB";
+          StatusLineFileInfo = $"{fileName} - {lastUpdate} - {fileSize}";
+        }
+        else if (_currentLogFile != null)
+        {
+          StatusLineFileInfo = $"File not found: {Path.GetFileName(_currentLogFile)}";
+        }
+        else if (_currentLogFolder != null)
+        {
+          StatusLineFileInfo = $"Watching folder: {_currentLogFolder}";
+        }
+        else
+        {
+          StatusLineFileInfo = "No file is watched.";
+        }
+      }
+      catch (Exception ex)
+      {
+        StatusLineFileInfo = $"Error: {ex.Message}";
+      }
+    }
+
+    private void UpdateSearchStatus()
+    {
+      if (currentSearchPosition >= 0 && searchResultPositions.Count > 0)
+      {
+        txtSearchStatus.Text = $"Match {currentSearchPosition + 1} of {searchResultPositions.Count}";
+      }
+      else if (!string.IsNullOrEmpty(txtFindText?.Text) && searchResultPositions.Count == 0)
+      {
+        txtSearchStatus.Text = "No matches found";
+      }
+      else
+      {
+        txtSearchStatus.Text = string.Empty;
+      }
+    }
+
+    private void ClearSearchStatus()
+    {
+      txtSearchStatus.Text = string.Empty;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

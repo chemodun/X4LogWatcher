@@ -74,6 +74,17 @@
             <TextBox x:Name="txtFindText" Margin="5,2" VerticalAlignment="Center" TextChanged="TxtFindText_TextChanged" KeyDown="TxtFindText_KeyDown" MinWidth="150"/>
         </DockPanel>
 
+        <!-- Status Bar - Always Visible -->
+        <StatusBar DockPanel.Dock="Bottom" Height="24" Background="{DynamicResource MahApps.Brushes.Gray10}">
+            <StatusBarItem HorizontalAlignment="Left" Margin="5,0">
+                <TextBlock x:Name="txtFileStatus" Text="{Binding StatusLineFileInfo}" Foreground="{DynamicResource MahApps.Brushes.Text}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem HorizontalAlignment="Right" Margin="5,0">
+                <TextBlock x:Name="txtSearchStatus" Foreground="{DynamicResource MahApps.Brushes.Accent}" />
+            </StatusBarItem>
+        </StatusBar>
+
         <!-- Tab Control with special Add Tab button -->
         <Controls:MetroAnimatedTabControl x:Name="tabControl"
                                           Margin="5">
