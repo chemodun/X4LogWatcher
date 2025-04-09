@@ -1284,7 +1284,32 @@ namespace X4LogWatcher
           string fileName = Path.GetFileName(_currentLogFile);
           string lastUpdate = $"Last updated: {fileInfo.LastWriteTime:HH:mm:ss}";
           string fileSize = $"Size: {(fileInfo.Length / 1024.0):N1} KB";
-          StatusLineFileInfo = $"{fileName} - {lastUpdate} - {fileSize}";
+
+          // Ensure status updates happen on the UI thread and are processed immediately
+          if (System.Windows.Threading.Dispatcher.CurrentDispatcher.CheckAccess())
+          {
+            StatusLineFileInfo = $"{fileName} - {lastUpdate} - {fileSize}";
+            // Force UI update
+            System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(
+              System.Windows.Threading.DispatcherPriority.Render,
+              new Action(() => { })
+            );
+          }
+          else
+          {
+            System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(
+              System.Windows.Threading.DispatcherPriority.Normal,
+              new Action(() =>
+              {
+                StatusLineFileInfo = $"{fileName} - {lastUpdate} - {fileSize}";
+                // Force UI update
+                System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(
+                  System.Windows.Threading.DispatcherPriority.Render,
+                  new Action(() => { })
+                );
+              })
+            );
+          }
         }
         else if (_currentLogFile != null)
         {
