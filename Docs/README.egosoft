@@ -13,6 +13,8 @@ X4 Log Watcher is a simple tool to monitor the log files of X4: Foundations. It 
 [*] Offline mode - i.e. load the log file from disk and parse it
 [*] Loading default profile on startup
 [*] Support a "Forced refresh" mode, if by some reason standard Windows file watcher doesn't work
+[*] Support simple text search in current filtered content via Ctrl+F and F3(Enter)/Shift+F3 for next/previous search result
+[*] Has a status bar with the current log file name and it's stats. Additionally shows the loading progress of the log file in the offline mode
 [/list]
 [size=130][u]Requirements[/u][/size]
 
@@ -26,6 +28,13 @@ Simply download a [b]X4LogWatcher.zip[/b] file from:
 [*] GitHub [url=https://github.com/chemodun/x4logwatcher/releases]Releases page[/url].
 [/list]
 And then extract it to your desired location. Then, run the executable to start the application.
+
+[size=130][u]Important Note[/u][/size]
+
+Please ensure that you started the X4 with appropriate command line switches to produce a log files.
+Details on how to do this can be found in the [url=https://wiki.egosoft.com:1337/X4%20Foundations%20Wiki/Modding%20Support/ScriptingMD/Community%20Guides/h2odragon%27s%20HOWTO-hackx4f/#debug-log]HOWTO - Hacking X4 Foundations[/url]
+
+[b]Notice:[/b] Please set the extension for the debug log to [b].log[/b]!
 
 [size=130][u]Usage[/u][/size]
 
@@ -57,7 +66,27 @@ Will work in case if any [b]watch mode[/b] is enabled.
 [size=130][u]Links[/u][/size]
 [list]
 [*] Short demo video on YouTube: [url=https://youtube.com/watch?v=6cPAfx4gxTA]X4 Log Watcher Demo[/url].
+[*] Short demo features the version 0.3.0 of the tool: [url=https://youtube.com/watch?v=wRRwymDHv1g]X4 Log Watcher demo. Version 0.3.0[/url].
 [*] There is a topic on the [url=https://forum.egosoft.com/viewtopic.php?t=470624]Egosoft forum[/url], related to this tool.
+[/list]
+[size=130][u]Changelog[/u][/size]
+
+[size=125][u][0.3.0] - 2025-04-09[/u][/size]
+[list]
+[*] Added:
+[list]
+[*] Search in current filtered content via Ctrl+F and F3(Enter)/Shift+F3 for next/previous search result.
+[*] Status bar with the current log file name and its stats.
+[*] Loading progress of the log file in offline mode.
+[/list]
+[*] Improved:
+[list]
+[*] Performance - file changes now loaded once then filtered per each tab.
+[/list]
+[/list]
+[size=125][u][0.2.0] - 2025-04-08[/u][/size]
+[list]
+[*] Initial public release.
 [/list]
 [size=130][u]Contributing[/u][/size]
 
