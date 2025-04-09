@@ -13,6 +13,8 @@ X4 Log Watcher is a simple tool to monitor the log files of X4: Foundations. It 
 - Offline mode - i.e. load the log file from disk and parse it
 - Loading default profile on startup
 - Support a "Forced refresh" mode, if by some reason standard Windows file watcher doesn't work
+- Support simple text search in current filtered content via Ctrl+F and F3(Enter)/Shift+F3 for next/previous search result
+- Has a status bar with the current log file name and it's stats. Additionally shows the loading progress of the log file in the offline mode
 
 ## Requirements
 
@@ -26,6 +28,13 @@ Simply download a `X4LogWatcher.zip` file from:
 - GitHub [Releases page](https://github.com/chemodun/x4logwatcher/releases).
 
 And then extract it to your desired location. Then, run the executable to start the application.
+
+## Important Note
+
+Please ensure that you started the X4 with appropriate command line switches to produce a log files.
+Details on how to do this can be found in the [HOWTO - Hacking X4 Foundations](https://wiki.egosoft.com:1337/X4%20Foundations%20Wiki/Modding%20Support/ScriptingMD/Community%20Guides/h2odragon%27s%20HOWTO-hackx4f/#debug-log)
+
+**Notice:** Please set the extension for the debug log to `.log`!
 
 ## Usage
 
@@ -57,8 +66,24 @@ Will work in case if any `watch mode` is enabled.
 ## Links
 
 - Short demo video on YouTube: [X4 Log Watcher Demo](https://youtube.com/watch?v=6cPAfx4gxTA).
-
+- Short demo features the version 0.3.0 of the tool: [X4 Log Watcher demo. Version 0.3.0](https://youtube.com/watch?v=wRRwymDHv1g).
 - There is a topic on the [Egosoft forum](https://forum.egosoft.com/viewtopic.php?t=470624), related to this tool.
+
+## Changelog
+
+### [0.3.0] - 2025-04-09
+
+- Added:
+  - Search in current filtered content via Ctrl+F and F3(Enter)/Shift+F3 for next/previous search result.
+  - Status bar with the current log file name and its stats.
+  - Loading progress of the log file in offline mode.
+
+- Improved:
+  - Performance - file changes now loaded once then filtered per each tab.
+
+### [0.2.0] - 2025-04-08
+
+- Initial public release.
 
 ## Contributing
 
