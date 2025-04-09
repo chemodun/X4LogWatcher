@@ -20,7 +20,12 @@ Windows 10 or later
 
 ## Installation
 
-Simple download a `X4LogWatcher.zip` file from the [Releases page](https://github.com/chemodun/x4logwatcher/releases) and extract it to your desired location. Then, run the executable to start the application.
+Simply download a `X4LogWatcher.zip` file from:
+
+- Nexus Mods [X4 Log Watcher](https://www.nexusmods.com/x4foundations/mods/1669)
+- GitHub [Releases page](https://github.com/chemodun/x4logwatcher/releases).
+
+And then extract it to your desired location. Then, run the executable to start the application.
 
 ## Usage
 
