@@ -850,6 +850,9 @@ namespace X4LogWatcher
         // If there's new content since last read
         if (stream.Length > tab.FilePosition || processFromBeginning)
         {
+          // Get total file size for progress reporting
+          long totalSize = stream.Length;
+
           // Position the stream at the right place
           stream.Seek(tab.FilePosition, SeekOrigin.Begin);
 
@@ -857,6 +860,7 @@ namespace X4LogWatcher
           var sb = new StringBuilder();
           string? line;
           int lineCount = 0;
+          long lastReportedProgress = 0;
 
           // Process file line by line
           while ((line = reader.ReadLine()) != null)
@@ -868,6 +872,32 @@ namespace X4LogWatcher
             {
               sb.AppendLine(line);
             }
+
+            // Report loading progress if processing from beginning
+            if (processFromBeginning && totalSize > 0)
+            {
+              // Calculate current progress percentage
+              long currentPosition = stream.Position;
+              int progressPercentage = (int)((currentPosition * 100) / totalSize);
+
+              // Update status bar every 5% to avoid too frequent updates
+              if (progressPercentage - lastReportedProgress >= 5)
+              {
+                lastReportedProgress = progressPercentage;
+                Dispatcher.Invoke(
+                  () =>
+                  {
+                    StatusLineFileInfo = $"Loading {Path.GetFileName(_currentLogFile)} - {progressPercentage}% complete...";
+                    // Force UI update
+                    System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(
+                      System.Windows.Threading.DispatcherPriority.Render,
+                      new Action(() => { })
+                    );
+                  },
+                  System.Windows.Threading.DispatcherPriority.Normal
+                );
+              }
+            }
           }
 
           // Append new matches to existing content
@@ -878,6 +908,12 @@ namespace X4LogWatcher
 
           // Store new position
           tab.FilePosition = stream.Length;
+
+          // Restore normal status bar display after loading is complete
+          if (processFromBeginning)
+          {
+            Dispatcher.Invoke(() => UpdateFileStatus());
+          }
         }
       }
       catch (Exception ex)
