@@ -529,7 +529,18 @@ namespace X4LogWatcher
       chkEnable.Checked += (s, e) =>
       {
         if (_currentLogFile != null)
+        {
+          if (tabInfo.FileChangedFlag)
+          {
+            // Reset file position to process from the beginning when enabling a tab
+            tabInfo.FilePosition = 0;
+            tabInfo.ClearContent();
+            tabInfo.FileChangedFlag = false;
+          }
+
+          // Process this specific tab's content individually when it's enabled
           ProcessTabContent(tabInfo);
+        }
       };
 
       // Add the tab to the tab control BEFORE the "+" tab
@@ -756,27 +767,25 @@ namespace X4LogWatcher
       if (isFileChanged)
       {
         // Inform all tabs about the file change
-        foreach (var tab in tabs)
+        foreach (var tab in tabs.Where(t => t.IsWatchingEnabled))
         {
-          if (tab.IsWatchingEnabled)
-          {
-            // If watching is enabled, reset position and clear content immediately
-            tab.FilePosition = 0;
-            tab.ClearContent();
-            ProcessTabContent(tab); // Process the new file content
-          }
-          else
-          {
-            // If watching is disabled, just set the change flag
-            // Content will be reloaded when watching is enabled again
-            tab.FileChangedFlag = true;
-          }
+          // Reset position to read from beginning
+          tab.FilePosition = 0;
+          // Clear content for the tab
+          tab.ClearContent();
+        }
+        ProcessAllEnabledTabsParallel();
+
+        // Mark files as changed for disabled tabs
+        foreach (var tab in tabs.Where(t => !t.IsWatchingEnabled))
+        {
+          tab.FileChangedFlag = true;
         }
       }
       else
       {
         // If the file is the same, just process enabled tabs
-        ProcessAllEnabledTabs();
+        ProcessAllEnabledTabsParallel();
       }
     }
 
@@ -789,35 +798,134 @@ namespace X4LogWatcher
           // Update the file status in the status bar
           UpdateFileStatus();
 
-          // Process each tab based on its watching state
-          foreach (var tab in tabs)
+          // Process all enabled tabs in parallel for better performance
+          ProcessAllEnabledTabsParallel();
+
+          // Mark files as changed for disabled tabs
+          foreach (var tab in tabs.Where(t => !t.IsWatchingEnabled))
           {
-            if (tab.IsWatchingEnabled)
-            {
-              // If watching is enabled, process the content now
-              ProcessTabContent(tab);
-            }
-            else
-            {
-              // If watching is disabled, just mark the file changed flag
-              // This will trigger content reset when watching is enabled later
-              tab.FileChangedFlag = true;
-            }
+            tab.FileChangedFlag = true;
           }
         });
       }
     }
 
-    private void ProcessAllEnabledTabs()
+    /// <summary>
+    /// Processes file updates in parallel for all enabled tabs by reading each source line once
+    /// and applying it to all tabs that match the line.
+    /// </summary>
+    private void ProcessAllEnabledTabsParallel()
     {
       if (_currentLogFile == null || !File.Exists(_currentLogFile))
         return;
 
-      foreach (var tab in tabs.Where(t => t.IsWatchingEnabled))
+      // Get all enabled tabs
+      var enabledTabs = tabs.Where(t => t.IsWatchingEnabled).ToList();
+      if (enabledTabs.Count == 0)
+        return;
+
+      try
       {
-        // Reset position to read from beginning
-        tab.FilePosition = 0;
-        ProcessTabContent(tab);
+        using var stream = new FileStream(_currentLogFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+
+        // Find the earliest file position among all tabs to determine where to start reading
+        long earliestPosition = enabledTabs.Min(t => t.FilePosition);
+
+        // Check if there's new content since last read for any tab
+        if (stream.Length <= earliestPosition)
+          return;
+
+        // Get total file size for progress reporting
+        long totalSize = stream.Length;
+
+        // Position the stream at the earliest position
+        stream.Seek(earliestPosition, SeekOrigin.Begin);
+
+        using var reader = new StreamReader(stream);
+        // Dictionary to store StringBuilder for each tab
+        var contentBuilders = enabledTabs.ToDictionary(tab => tab, _ => new StringBuilder());
+        string? line;
+        int lineCount = 0;
+        long lastReportedProgress = 0;
+        bool processFromBeginning = enabledTabs.Any(t => t.FilePosition == 0);
+
+        // Process file line by line
+        while ((line = reader.ReadLine()) != null)
+        {
+          lineCount++;
+          long currentPosition = stream.Position;
+
+          // For each enabled tab, check if the line matches its regex and append if it does
+          foreach (var tab in enabledTabs)
+          {
+            // Skip lines that are before this tab's current position
+            if (currentPosition <= tab.FilePosition)
+              continue;
+
+            // Check if line matches regex
+            if (tab.CompiledRegex != null && tab.CompiledRegex.IsMatch(line))
+            {
+              contentBuilders[tab].AppendLine(line);
+            }
+          }
+
+          // Report loading progress if processing from beginning
+          if (processFromBeginning && totalSize > 0)
+          {
+            // Calculate current progress percentage
+            int progressPercentage = (int)((currentPosition * 100) / totalSize);
+
+            // Update status bar every 5% to avoid too frequent updates
+            if (progressPercentage - lastReportedProgress >= 5)
+            {
+              lastReportedProgress = progressPercentage;
+              Dispatcher.Invoke(
+                () =>
+                {
+                  StatusLineFileInfo = $"Loading {Path.GetFileName(_currentLogFile)} - {progressPercentage}% complete...";
+                  // Force UI update
+                  System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(
+                    System.Windows.Threading.DispatcherPriority.Render,
+                    new Action(() => { })
+                  );
+                },
+                System.Windows.Threading.DispatcherPriority.Normal
+              );
+            }
+          }
+        }
+
+        // Append new matches to existing content for each tab
+        Dispatcher.Invoke(() =>
+        {
+          foreach (var tab in enabledTabs)
+          {
+            var content = contentBuilders[tab].ToString();
+            if (!string.IsNullOrEmpty(content))
+            {
+              tab.AppendContent(content);
+
+              // If this tab isn't currently selected, mark it as having new content
+              if (tabControl.SelectedItem != tab.TabItem)
+              {
+                tab.SetHasNewContent(true);
+              }
+            }
+
+            // Store new position
+            tab.FilePosition = stream.Length;
+          }
+
+          // Restore normal status bar display after loading is complete
+          if (processFromBeginning)
+          {
+            UpdateFileStatus();
+          }
+        });
+      }
+      catch (Exception ex)
+      {
+        MessageBox.Show($"Error processing tab content: {ex.Message}", "Tab Content Error", MessageBoxButton.OK, MessageBoxImage.Error);
       }
     }
 
@@ -1032,7 +1140,7 @@ namespace X4LogWatcher
       lastFileSize = fileInfo.Length;
 
       // Process all enabled tabs once to ensure we have the latest content
-      ProcessAllEnabledTabs();
+      ProcessAllEnabledTabsParallel();
 
       // Create and start the timer for periodic checks
       forcedRefreshTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
