@@ -58,6 +58,34 @@ namespace X4LogWatcher
       }
     }
 
+    private int _afterLines;
+
+    /// <summary>
+    /// Number of lines to display after a matching line
+    /// </summary>
+    public int AfterLines
+    {
+      get => _afterLines;
+      set
+      {
+        if (_afterLines != value)
+        {
+          _afterLines = value;
+          OnPropertyChanged(nameof(AfterLines));
+
+          // If this tab is watching and the value changed, refresh the content
+          if (IsWatchingEnabled)
+          {
+            FilePosition = 0;
+            ClearContent();
+          }
+        }
+      }
+    }
+
+    // Counter for tracking remaining lines to include after a match
+    public int AfterLinesCurrent { get; set; }
+
     public long FilePosition { get; set; }
     public Regex? CompiledRegex { get; private set; }
 
@@ -85,7 +113,8 @@ namespace X4LogWatcher
     // UI controls
     public MetroTabItem TabItem { get; }
     public TextBox RegexTextBox { get; }
-    public TextBox? NameTextBox { get; } // New property for tab name textbox, made nullable
+    public NumericUpDown AfterLinesNumericUpDown { get; }
+    public TextBox NameTextBox { get; }
     public CheckBox WatchingCheckBox { get; }
     public TextBox ContentTextBox { get; }
 
@@ -103,13 +132,16 @@ namespace X4LogWatcher
       CheckBox watchingCheckBox,
       TextBox nameTextBox,
       TextBox regexTextBox,
+      NumericUpDown afterLinesTextBox,
       TextBox contentTextBox,
       string pattern,
+      int afterLines,
       bool enabled
     )
     {
       TabItem = tabItem;
       RegexTextBox = regexTextBox;
+      AfterLinesNumericUpDown = afterLinesTextBox;
       WatchingCheckBox = watchingCheckBox;
       ContentTextBox = contentTextBox;
       NameTextBox = nameTextBox;
@@ -119,6 +151,8 @@ namespace X4LogWatcher
       FilePosition = 0;
       FileChangedFlag = false;
       HasNewContent = false;
+      AfterLines = afterLines;
+      AfterLinesCurrent = 0;
 
       // Initialize timer for delayed refresh
       regexRefreshTimer = new System.Windows.Threading.DispatcherTimer
@@ -132,6 +166,8 @@ namespace X4LogWatcher
       RegexTextBox.TextChanged += RegexTextBox_TextChanged;
 
       NameTextBox.TextChanged += NameTextBox_TextChanged;
+
+      AfterLinesNumericUpDown.ValueChanged += AfterLinesNumericUpDown_ValueChanged;
 
       WatchingCheckBox.Checked += (sender, e) => IsWatchingEnabled = true;
       WatchingCheckBox.Unchecked += (sender, e) => IsWatchingEnabled = false;
@@ -154,6 +190,21 @@ namespace X4LogWatcher
       {
         TabName = nameTextBox.Text;
         UpdateTabHeader();
+      }
+    }
+
+    private void AfterLinesNumericUpDown_ValueChanged(object? sender, RoutedPropertyChangedEventArgs<double?> e)
+    {
+      if (sender is NumericUpDown afterLinesNumericUpDown)
+      {
+        if (afterLinesNumericUpDown.Value.HasValue)
+        {
+          AfterLines = (int)(afterLinesNumericUpDown.Value ?? AfterLines);
+        }
+        else
+        {
+          afterLinesNumericUpDown.Value = AfterLines;
+        }
       }
     }
 

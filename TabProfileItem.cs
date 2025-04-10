@@ -17,6 +17,9 @@ namespace X4LogWatcher
     [JsonPropertyName("isEnabled")]
     public bool IsEnabled { get; set; }
 
+    [JsonPropertyName("afterLines")]
+    public int AfterLines { get; set; }
+
     // Default constructor for JSON deserialization
     public TabProfileItem() { }
 
@@ -26,6 +29,7 @@ namespace X4LogWatcher
       TabName = tabInfo.TabName;
       RegexPattern = tabInfo.RegexPattern;
       IsEnabled = tabInfo.IsWatchingEnabled;
+      AfterLines = tabInfo.AfterLines;
     }
   }
 }

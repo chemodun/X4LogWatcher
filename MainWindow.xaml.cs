@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -156,7 +159,7 @@ namespace X4LogWatcher
     }
 
     // Replace dictionary with TabInfo collection
-    private readonly List<TabInfo> tabs = [];
+    private readonly List<TabInfo> tabs = new();
 
     // Command to close tabs
     private ICommand? _closeTabCommand;
@@ -167,8 +170,10 @@ namespace X4LogWatcher
 
     // Search functionality
     private int currentSearchPosition = -1;
-    private readonly List<int> searchResultPositions = [];
+    private readonly List<int> searchResultPositions = new();
     private TabInfo? currentSearchTab = null;
+
+    private bool _isProcessing = false;
 
     public MainWindow()
     {
@@ -425,10 +430,10 @@ namespace X4LogWatcher
     {
       // Create a new tab with default settings
       string defaultRegex = ".*";
-      AddNewTab("", defaultRegex, false);
+      AddNewTab("", defaultRegex, 0, false);
     }
 
-    private void AddNewTab(string tabName, string regexPattern, bool isEnabled)
+    private void AddNewTab(string tabName, string regexPattern, int afterLines, bool isEnabled)
     {
       // Create a MetroTabItem with close button
       var tabItem = new MetroTabItem
@@ -448,26 +453,35 @@ namespace X4LogWatcher
       mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(35) }); // Second control row
       mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // Content row
 
-      // Create the first row panel (checkbox and tab name)
-      var firstRowPanel = new DockPanel { LastChildFill = true };
-      Grid.SetRow(firstRowPanel, 0);
-      mainGrid.Children.Add(firstRowPanel);
+      mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Auto) }); // Content column
+      mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Auto) }); // Content column
+      mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+      mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Auto) }); // Content column
+      mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Auto) }); // Content column
+      mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Auto) }); // Content column
 
       // Add enable/disable checkbox
       var chkEnable = new CheckBox
       {
-        Content = "Enable",
+        Content = "Enabled",
         IsChecked = isEnabled,
         VerticalAlignment = VerticalAlignment.Center,
         Margin = new Thickness(5, 0, 5, 0),
       };
-      DockPanel.SetDock(chkEnable, Dock.Left);
-      firstRowPanel.Children.Add(chkEnable);
+      Grid.SetColumn(chkEnable, 0);
+      Grid.SetRow(chkEnable, 0);
+      mainGrid.Children.Add(chkEnable);
 
       // Add Name label
-      var lblName = new Label { Content = "Name:", VerticalAlignment = VerticalAlignment.Center };
-      DockPanel.SetDock(lblName, Dock.Left);
-      firstRowPanel.Children.Add(lblName);
+      var lblName = new Label
+      {
+        Content = "Name:",
+        VerticalAlignment = VerticalAlignment.Center,
+        HorizontalAlignment = HorizontalAlignment.Right,
+      };
+      Grid.SetColumn(lblName, 1);
+      Grid.SetRow(lblName, 0);
+      mainGrid.Children.Add(lblName);
 
       // Add the tab name input textbox (fills remaining space)
       var txtName = new TextBox
@@ -476,17 +490,55 @@ namespace X4LogWatcher
         VerticalAlignment = VerticalAlignment.Center,
         Margin = new Thickness(5, 0, 5, 0),
       };
-      firstRowPanel.Children.Add(txtName);
-
-      // Create the second row panel (regex pattern and Apply button)
-      var secondRowPanel = new DockPanel { LastChildFill = true };
-      Grid.SetRow(secondRowPanel, 1);
-      mainGrid.Children.Add(secondRowPanel);
+      Grid.SetColumn(txtName, 2);
+      Grid.SetColumnSpan(txtName, 4);
+      Grid.SetRow(txtName, 0);
+      mainGrid.Children.Add(txtName);
 
       // Add RegEx label
-      var lblRegEx = new Label { Content = "RegEx:", VerticalAlignment = VerticalAlignment.Center };
-      DockPanel.SetDock(lblRegEx, Dock.Left);
-      secondRowPanel.Children.Add(lblRegEx);
+      var lblRegEx = new Label
+      {
+        Content = "RegEx:",
+        VerticalAlignment = VerticalAlignment.Center,
+        HorizontalAlignment = HorizontalAlignment.Right,
+      };
+      Grid.SetColumn(lblRegEx, 0);
+      Grid.SetRow(lblRegEx, 1);
+      mainGrid.Children.Add(lblRegEx);
+
+      // Add the regex input textbox (fills remaining space in two columns)
+      var txtRegex = new TextBox
+      {
+        Text = regexPattern,
+        VerticalAlignment = VerticalAlignment.Center,
+        Margin = new Thickness(5, 0, 5, 0),
+      };
+      Grid.SetColumn(txtRegex, 1);
+      Grid.SetColumnSpan(txtRegex, 2);
+      Grid.SetRow(txtRegex, 1);
+      mainGrid.Children.Add(txtRegex);
+
+      // Add After Lines label and input field
+      var lblAfterLines = new Label { Content = "After Lines:", VerticalAlignment = VerticalAlignment.Center };
+      Grid.SetColumn(lblAfterLines, 3);
+      Grid.SetRow(lblAfterLines, 1);
+      mainGrid.Children.Add(lblAfterLines);
+
+      // Add NumericUpDown for After Lines (from MahApps.Metro)
+      var numAfterLines = new NumericUpDown
+      {
+        Value = afterLines,
+        Width = 80,
+        Minimum = 0,
+        Maximum = 10,
+        HideUpDownButtons = false,
+        NumericInputMode = MahApps.Metro.Controls.NumericInput.Numbers,
+        VerticalAlignment = VerticalAlignment.Center,
+        Margin = new Thickness(0, 0, 10, 0),
+      };
+      Grid.SetColumn(numAfterLines, 4);
+      Grid.SetRow(numAfterLines, 1);
+      mainGrid.Children.Add(numAfterLines);
 
       // Add Apply button (right side)
       var btnApply = new Button
@@ -496,21 +548,14 @@ namespace X4LogWatcher
         Margin = new Thickness(5, 0, 5, 0),
         VerticalAlignment = VerticalAlignment.Center,
       };
-      DockPanel.SetDock(btnApply, Dock.Right);
-      secondRowPanel.Children.Add(btnApply);
-
-      // Add the regex input textbox (fills remaining space)
-      var txtRegex = new TextBox
-      {
-        Text = regexPattern,
-        VerticalAlignment = VerticalAlignment.Center,
-        Margin = new Thickness(5, 0, 5, 0),
-      };
-      secondRowPanel.Children.Add(txtRegex);
+      Grid.SetColumn(btnApply, 5);
+      Grid.SetRow(btnApply, 1);
+      mainGrid.Children.Add(btnApply);
 
       // Create the content panel for the third row (with the text content)
       var contentPanel = new Border { BorderThickness = new Thickness(1), BorderBrush = Brushes.LightGray };
       Grid.SetRow(contentPanel, 2);
+      Grid.SetColumnSpan(contentPanel, 6);
       mainGrid.Children.Add(contentPanel);
 
       // Add TextBox for content
@@ -528,7 +573,7 @@ namespace X4LogWatcher
       contentPanel.Child = txtContent;
 
       // Create and store TabInfo object
-      var tabInfo = new TabInfo(tabItem, chkEnable, txtName, txtRegex, txtContent, regexPattern, isEnabled);
+      var tabInfo = new TabInfo(tabItem, chkEnable, txtName, txtRegex, numAfterLines, txtContent, regexPattern, afterLines, isEnabled);
       tabs.Add(tabInfo);
 
       // Set up Apply button click handler using the TabInfo object
@@ -596,7 +641,7 @@ namespace X4LogWatcher
       // If there are no more tabs, consider adding a default one
       if (tabs.Count == 0 && _currentLogFile != null)
       {
-        AddNewTab(".*", ".*", false);
+        AddNewTab(".*", ".*", 0, false);
       }
     }
 
@@ -650,7 +695,7 @@ namespace X4LogWatcher
       // Add tabs from the profile
       foreach (var item in profileData)
       {
-        AddNewTab(item.TabName, item.RegexPattern, item.IsEnabled);
+        AddNewTab(item.TabName, item.RegexPattern, item.AfterLines, item.IsEnabled);
       }
 
       // Update recent profiles
@@ -785,20 +830,20 @@ namespace X4LogWatcher
       if (isFileChanged)
       {
         // Inform all tabs about the file change
-        foreach (var tab in tabs.Where(t => t.IsWatchingEnabled))
-        {
-          // Reset position to read from beginning
-          tab.FilePosition = 0;
-          // Clear content for the tab
-          tab.ClearContent();
-        }
-        ProcessAllEnabledTabsParallel();
-
-        // Mark files as changed for disabled tabs
-        foreach (var tab in tabs.Where(t => !t.IsWatchingEnabled))
+        foreach (var tab in tabs)
         {
           tab.FileChangedFlag = true;
+          if (tab.IsWatchingEnabled)
+          {
+            // Reset new content flag
+            tab.HasNewContent = false;
+            // Reset position to read from beginning
+            tab.FilePosition = 0;
+            // Clear content for the tab
+            tab.ClearContent();
+          }
         }
+        ProcessAllEnabledTabsParallel();
       }
       else
       {
@@ -834,38 +879,229 @@ namespace X4LogWatcher
     /// </summary>
     private void ProcessAllEnabledTabsParallel()
     {
-      if (_currentLogFile == null || !File.Exists(_currentLogFile))
+      // If processing is already in progress, exit early
+      if (_isProcessing || _currentLogFile == null || !File.Exists(_currentLogFile))
         return;
 
-      // Get all enabled tabs
-      var enabledTabs = tabs.Where(t => t.IsWatchingEnabled).ToList();
-      if (enabledTabs.Count == 0)
+      try
+      {
+        _isProcessing = true;
+        List<TabInfo> enabledTabs = new();
+
+        Dispatcher.Invoke(() => enabledTabs = tabs.Where(t => t.IsWatchingEnabled).ToList());
+
+        // If no enabled tabs, exit early
+        if (!enabledTabs.Any())
+        {
+          _isProcessing = false;
+          return;
+        }
+
+        Stopwatch sw = new();
+        sw.Start();
+
+        // Get file content once for all tabs
+        using var stream = new FileStream(_currentLogFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        long fileSize = stream.Length;
+
+        // Check all tabs to see if we need to re-read the entire file
+        bool needFullRead = false;
+        foreach (var tab in enabledTabs)
+        {
+          if (tab.FilePosition > fileSize)
+          {
+            tab.FilePosition = 0;
+            tab.AfterLinesCurrent = 0; // Reset after lines counter when file is reset
+            needFullRead = true;
+          }
+        }
+
+        // If file got truncated/replaced, we need to reset positions and re-read
+        if (needFullRead)
+        {
+          foreach (var tab in enabledTabs)
+          {
+            tab.FilePosition = 0;
+            tab.AfterLinesCurrent = 0; // Reset after lines counter when file is reset
+          }
+        }
+
+        // Check if there's new content for any tab
+        bool hasNewContent = enabledTabs.Any(t => t.FilePosition < fileSize);
+        if (!hasNewContent)
+        {
+          _isProcessing = false;
+          return;
+        }
+
+        // Read the file line by line just once for all tabs
+        using var reader = new StreamReader(stream);
+        var fileLines = new List<(long position, string text)>();
+        string? line;
+
+        // Read the whole file for full update, or just new portion for incremental update
+        if (needFullRead)
+        {
+          stream.Seek(0, SeekOrigin.Begin);
+        }
+        else
+        {
+          // Find the earliest position among tabs
+          long minPosition = enabledTabs.Min(t => t.FilePosition);
+          stream.Seek(minPosition, SeekOrigin.Begin);
+        }
+
+        // Read all lines and their positions
+        while ((line = reader.ReadLine()) != null)
+        {
+          fileLines.Add((stream.Position, line));
+        }
+
+        // Process each tab in parallel
+        var contentByTab = new ConcurrentDictionary<TabInfo, StringBuilder>();
+
+        Parallel.ForEach(
+          enabledTabs,
+          tab =>
+          {
+            var contentBuilder = new StringBuilder();
+            bool processFromBeginning = tab.FilePosition == 0;
+
+            // Reset after lines counter when starting from beginning
+            if (processFromBeginning)
+            {
+              tab.AfterLinesCurrent = 0;
+            }
+
+            // Get only lines after tab's last position
+            var linesToProcess = fileLines
+              .Where(l =>
+              {
+                var position = l.position;
+                if (position <= tab.FilePosition)
+                  return false;
+                return true;
+              })
+              .Select(l => l.text);
+
+            foreach (var currentLine in linesToProcess)
+            {
+              if (tab.CompiledRegex != null)
+              {
+                bool isMatch = tab.CompiledRegex.IsMatch(currentLine);
+                if (isMatch)
+                {
+                  contentBuilder.AppendLine(currentLine);
+
+                  // If this is a match, reset the after lines counter to the configured value
+                  if (tab.AfterLines > 0)
+                  {
+                    tab.AfterLinesCurrent = tab.AfterLines;
+                  }
+                }
+                // If we're in the "after lines" period, include this line too
+                else if (tab.AfterLinesCurrent > 0)
+                {
+                  contentBuilder.AppendLine(currentLine);
+                  // Decrement the counter
+                  tab.AfterLinesCurrent--;
+                }
+              }
+            }
+
+            contentByTab.TryAdd(tab, contentBuilder);
+          }
+        );
+
+        // Update UI on main thread
+        Dispatcher.Invoke(() =>
+        {
+          // Process results for each tab
+          foreach (var tab in enabledTabs)
+          {
+            if (contentByTab.TryGetValue(tab, out var contentBuilder))
+            {
+              var content = contentBuilder.ToString();
+              if (!string.IsNullOrEmpty(content))
+              {
+                tab.AppendContent(content);
+
+                // If this tab isn't currently selected, mark it as having new content
+                if (tabControl.SelectedItem != tab.TabItem)
+                {
+                  tab.SetHasNewContent(true);
+                }
+              }
+            }
+
+            // Update tab's position to end of file
+            tab.FilePosition = fileSize;
+          }
+        });
+
+        sw.Stop();
+        // Log processing time for performance monitoring
+        Debug.WriteLine($"ProcessAllEnabledTabsParallel finished in {sw.ElapsedMilliseconds}ms");
+      }
+      catch (Exception ex)
+      {
+        Dispatcher.Invoke(() =>
+        {
+          MessageBox.Show($"Error processing tabs: {ex.Message}", "Processing Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        });
+      }
+      finally
+      {
+        _isProcessing = false;
+      }
+    }
+
+    private static string? FindMostRecentLogFile(string folderPath)
+    {
+      try
+      {
+        var logFiles = Directory.GetFiles(folderPath, "*.log").OrderByDescending(f => new FileInfo(f).LastWriteTime).ToList();
+
+        return logFiles.Count > 0 ? logFiles[0] : null;
+      }
+      catch (Exception ex)
+      {
+        MessageBox.Show($"Error accessing folder: {ex.Message}", "Folder Access Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        return null;
+      }
+    }
+
+    private void ProcessTabContent(TabInfo tab)
+    {
+      if (_currentLogFile == null || !File.Exists(_currentLogFile) || tab.CompiledRegex == null)
         return;
 
       try
       {
         using var stream = new FileStream(_currentLogFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 
-        // Find the earliest file position among all tabs to determine where to start reading
-        long earliestPosition = enabledTabs.Min(t => t.FilePosition);
-
-        // Check if there's new content since last read for any tab
-        if (stream.Length <= earliestPosition)
+        // Check if there's new content
+        if (stream.Length <= tab.FilePosition)
           return;
 
         // Get total file size for progress reporting
         long totalSize = stream.Length;
 
-        // Position the stream at the earliest position
-        stream.Seek(earliestPosition, SeekOrigin.Begin);
+        // Position the stream at tab's last read position
+        stream.Seek(tab.FilePosition, SeekOrigin.Begin);
 
         using var reader = new StreamReader(stream);
-        // Dictionary to store StringBuilder for each tab
-        var contentBuilders = enabledTabs.ToDictionary(tab => tab, _ => new StringBuilder());
+        var contentBuilder = new StringBuilder();
         string? line;
         int lineCount = 0;
         long lastReportedProgress = 0;
-        bool processFromBeginning = enabledTabs.Any(t => t.FilePosition == 0);
+        bool processFromBeginning = tab.FilePosition == 0;
+
+        // Reset after lines counter when starting from beginning
+        if (processFromBeginning)
+        {
+          tab.AfterLinesCurrent = 0;
+        }
 
         // Process file line by line
         while ((line = reader.ReadLine()) != null)
@@ -873,18 +1109,24 @@ namespace X4LogWatcher
           lineCount++;
           long currentPosition = stream.Position;
 
-          // For each enabled tab, check if the line matches its regex and append if it does
-          foreach (var tab in enabledTabs)
+          // Check if line matches regex
+          bool isMatch = tab.CompiledRegex.IsMatch(line);
+          if (isMatch)
           {
-            // Skip lines that are before this tab's current position
-            if (currentPosition <= tab.FilePosition)
-              continue;
+            contentBuilder.AppendLine(line);
 
-            // Check if line matches regex
-            if (tab.CompiledRegex != null && tab.CompiledRegex.IsMatch(line))
+            // If this is a match, reset the after lines counter to the configured value
+            if (tab.AfterLines > 0)
             {
-              contentBuilders[tab].AppendLine(line);
+              tab.AfterLinesCurrent = tab.AfterLines;
             }
+          }
+          // If we're in the "after lines" period, include this line too
+          else if (tab.AfterLinesCurrent > 0)
+          {
+            contentBuilder.AppendLine(line);
+            // Decrement the counter
+            tab.AfterLinesCurrent--;
           }
 
           // Report loading progress if processing from beginning
@@ -913,133 +1155,29 @@ namespace X4LogWatcher
           }
         }
 
-        // Append new matches to existing content for each tab
-        Dispatcher.Invoke(() =>
+        // Append new matches to existing content
+        var content = contentBuilder.ToString();
+        if (!string.IsNullOrEmpty(content))
         {
-          foreach (var tab in enabledTabs)
+          Dispatcher.Invoke(() =>
           {
-            var content = contentBuilders[tab].ToString();
-            if (!string.IsNullOrEmpty(content))
+            tab.AppendContent(content);
+
+            // If this tab isn't currently selected, mark it as having new content
+            if (tabControl.SelectedItem != tab.TabItem)
             {
-              tab.AppendContent(content);
-
-              // If this tab isn't currently selected, mark it as having new content
-              if (tabControl.SelectedItem != tab.TabItem)
-              {
-                tab.SetHasNewContent(true);
-              }
+              tab.SetHasNewContent(true);
             }
+          });
+        }
 
-            // Store new position
-            tab.FilePosition = stream.Length;
-          }
+        // Store new position
+        tab.FilePosition = stream.Length;
 
-          // Restore normal status bar display after loading is complete
-          if (processFromBeginning)
-          {
-            UpdateFileStatus();
-          }
-        });
-      }
-      catch (Exception ex)
-      {
-        MessageBox.Show($"Error processing tab content: {ex.Message}", "Tab Content Error", MessageBoxButton.OK, MessageBoxImage.Error);
-      }
-    }
-
-    private static string? FindMostRecentLogFile(string folderPath)
-    {
-      try
-      {
-        var logFiles = Directory.GetFiles(folderPath, "*.log").OrderByDescending(f => new FileInfo(f).LastWriteTime).ToList();
-
-        return logFiles.Count > 0 ? logFiles[0] : null;
-      }
-      catch (Exception ex)
-      {
-        MessageBox.Show($"Error accessing folder: {ex.Message}", "Folder Access Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        return null;
-      }
-    }
-
-    private void ProcessTabContent(TabInfo tab)
-    {
-      if (_currentLogFile == null || !File.Exists(_currentLogFile))
-        return;
-
-      try
-      {
-        using var stream = new FileStream(_currentLogFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        // Check if we need to process from the beginning
-        bool processFromBeginning = tab.FilePosition == 0;
-
-        // If there's new content since last read
-        if (stream.Length > tab.FilePosition || processFromBeginning)
+        // Restore normal status bar display after loading is complete
+        if (processFromBeginning)
         {
-          // Get total file size for progress reporting
-          long totalSize = stream.Length;
-
-          // Position the stream at the right place
-          stream.Seek(tab.FilePosition, SeekOrigin.Begin);
-
-          using var reader = new StreamReader(stream);
-          var sb = new StringBuilder();
-          string? line;
-          int lineCount = 0;
-          long lastReportedProgress = 0;
-
-          // Process file line by line
-          while ((line = reader.ReadLine()) != null)
-          {
-            lineCount++;
-
-            // Check if line matches regex
-            if (tab.CompiledRegex != null && tab.CompiledRegex.IsMatch(line))
-            {
-              sb.AppendLine(line);
-            }
-
-            // Report loading progress if processing from beginning
-            if (processFromBeginning && totalSize > 0)
-            {
-              // Calculate current progress percentage
-              long currentPosition = stream.Position;
-              int progressPercentage = (int)((currentPosition * 100) / totalSize);
-
-              // Update status bar every 5% to avoid too frequent updates
-              if (progressPercentage - lastReportedProgress >= 5)
-              {
-                lastReportedProgress = progressPercentage;
-                Dispatcher.Invoke(
-                  () =>
-                  {
-                    StatusLineFileInfo = $"Loading {Path.GetFileName(_currentLogFile)} - {progressPercentage}% complete...";
-                    // Force UI update
-                    System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(
-                      System.Windows.Threading.DispatcherPriority.Render,
-                      new Action(() => { })
-                    );
-                  },
-                  System.Windows.Threading.DispatcherPriority.Normal
-                );
-              }
-            }
-          }
-
-          // Append new matches to existing content
-          if (sb.Length > 0)
-          {
-            tab.AppendContent(sb.ToString());
-          }
-
-          // Store new position
-          tab.FilePosition = stream.Length;
-
-          // Restore normal status bar display after loading is complete
-          if (processFromBeginning)
-          {
-            Dispatcher.Invoke(() => UpdateFileStatus());
-          }
+          Dispatcher.Invoke(() => UpdateFileStatus());
         }
       }
       catch (Exception ex)
