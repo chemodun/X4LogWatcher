@@ -195,10 +195,28 @@ namespace X4LogWatcher
       // Initialize recent profiles menu
       UpdateRecentProfilesMenu();
 
+      // Add handler for tab selection changed to clear new content indicator
+      tabControl.SelectionChanged += TabControl_SelectionChanged;
+
       // Automatically load the active profile if one exists
       if (!string.IsNullOrEmpty(appConfig.ActiveProfile) && File.Exists(appConfig.ActiveProfile))
       {
         LoadProfile(appConfig.ActiveProfile);
+      }
+    }
+
+    // Handle tab selection changes to clear new content indicators
+    private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (e.AddedItems.Count > 0 && e.AddedItems[0] is MetroTabItem selectedItem && selectedItem != addTabButton)
+      {
+        // Find the TabInfo corresponding to the selected tab
+        var selectedTabInfo = tabs.FirstOrDefault(t => t.TabItem == selectedItem);
+        if (selectedTabInfo != null)
+        {
+          // Reset the new content indicator when a tab is selected
+          selectedTabInfo.SetHasNewContent(false);
+        }
       }
     }
 

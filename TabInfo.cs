@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Shapes;
 using MahApps.Metro.Controls;
 
 namespace X4LogWatcher
@@ -70,8 +71,14 @@ namespace X4LogWatcher
       get => _hasNewContent;
       set
       {
-        _hasNewContent = value;
-        OnPropertyChanged(nameof(HasNewContent));
+        if (_hasNewContent != value)
+        {
+          _hasNewContent = value;
+          OnPropertyChanged(nameof(HasNewContent));
+
+          // Update visual indication when this property changes
+          UpdateNewContentIndicator();
+        }
       }
     }
 
@@ -84,9 +91,6 @@ namespace X4LogWatcher
 
     // Validation state
     public bool IsRegexValid { get; private set; }
-
-    // Original tab font weight when not bold
-    private FontWeight originalFontWeight = FontWeights.Normal;
 
     // Timer for delayed regex refresh
     private System.Windows.Threading.DispatcherTimer? regexRefreshTimer;
@@ -174,14 +178,23 @@ namespace X4LogWatcher
     /// </summary>
     public void UpdateTabHeader()
     {
+      string displayText;
       if (!string.IsNullOrWhiteSpace(TabName))
       {
-        TabItem.Header = TabName;
+        displayText = TabName;
       }
       else
       {
-        TabItem.Header = RegexPattern;
+        displayText = RegexPattern;
       }
+
+      // Add a prominent indicator for new content
+      if (HasNewContent)
+      {
+        displayText = "🔔 " + displayText; // Warning symbol to indicate attention needed
+      }
+
+      TabItem.Header = displayText;
     }
 
     private void RegexRefreshTimer_Tick(object? sender, EventArgs e)
@@ -261,9 +274,16 @@ namespace X4LogWatcher
     public void SetHasNewContent(bool hasNew)
     {
       HasNewContent = hasNew;
+      // UpdateTabHeader is called by HasNewContent property setter via UpdateNewContentIndicator
+    }
 
-      // For the MahApps.Metro version, we don't need to change the font weight manually
-      // Instead, we could use a visual indicator or other approach if needed
+    /// <summary>
+    /// Updates the visual indicator for new content
+    /// </summary>
+    private void UpdateNewContentIndicator()
+    {
+      // Just update the tab header text which includes the indicator when HasNewContent is true
+      UpdateTabHeader();
     }
   }
 }
