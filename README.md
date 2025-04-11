@@ -85,7 +85,7 @@ Will work in case if any `watch mode` is enabled.
 - Fixed:
   - "Tab" order of input elements in the filter form.
   - Wrong regex is used after editing the filter and Enabling the Tab
-  = Extra content cleanup after pausing the Tab
+  - Extra content cleanup after pausing the Tab
 
 ### [0.3.0] - 2025-04-09
 
