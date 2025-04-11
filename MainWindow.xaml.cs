@@ -1060,7 +1060,7 @@ namespace X4LogWatcher
 
         sw.Stop();
         // Log processing time for performance monitoring
-        Debug.WriteLine($"ProcessAllEnabledTabsParallel finished in {sw.ElapsedMilliseconds}ms");
+        // Debug.WriteLine($"ProcessAllEnabledTabsParallel finished in {sw.ElapsedMilliseconds}ms");
       }
       catch (Exception ex)
       {
