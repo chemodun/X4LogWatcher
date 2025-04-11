@@ -15,6 +15,9 @@ X4 Log Watcher is a simple tool to monitor the log files of X4: Foundations. It 
 - Support a "Forced refresh" mode, if by some reason standard Windows file watcher doesn't work
 - Support simple text search in current filtered content via Ctrl+F and F3(Enter)/Shift+F3 for next/previous search result
 - Has a status bar with the current log file name and it's stats. Additionally shows the loading progress of the log file in the offline mode
+- Shows the updates in non-focused tabs via adding the notification symbol "🔔" to the tab name
+- Can show up to 10 lines after the matched line in the log file. Useful for showing the error details in the scripts
+- Extension for the log file is configurable via editing of the config file. By default, it is set to `.log`
 
 ## Requirements
 
@@ -65,11 +68,22 @@ Will work in case if any `watch mode` is enabled.
 
 ## Links
 
-- Short demo video on YouTube: [X4 Log Watcher Demo](https://youtube.com/watch?v=6cPAfx4gxTA).
-- Short demo features the version 0.3.0 of the tool: [X4 Log Watcher demo. Version 0.3.0](https://youtube.com/watch?v=wRRwymDHv1g).
+- A short demo showcasing the tool features introduced in version 0.2.0: [X4 Log Watcher Demo](https://youtube.com/watch?v=6cPAfx4gxTA).
+- A short demo showcasing the new features introduced in version 0.3.0: [X4 Log Watcher Demo - Version 0.3.0](https://youtube.com/watch?v=wRRwymDHv1g).
+- A short demo showcasing the new features introduced in version 0.4.0: [X4 Log Watcher Demo - Version 0.4.0](https://youtube.com/watch?v=1LO7Upyd3ZM).
 - There is a topic on the [Egosoft forum](https://forum.egosoft.com/viewtopic.php?t=470624), related to this tool.
 
 ## Changelog
+
+### [0.4.0] - 2025-04-11
+
+- Added:
+  - Notification symbol "🔔" to the tab name, if the tab is not focused and there are new updates in it.
+  - Show up to 10 lines after the matched line in the log file. Useful for showing the error details in the scripts.
+  - Support for configurable log file extensions in the application settings.
+
+- Fixed
+  - "Tab" order of input elements in the filter form.
 
 ### [0.3.0] - 2025-04-09
 
