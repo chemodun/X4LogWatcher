@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/chemodun/X4LogWatcher/compare/v0.4.1...v0.4.2) (2025-04-11)
+
+
+### Documentation
+
+* update README - fix mistypings ([f76ef43](https://github.com/chemodun/X4LogWatcher/commit/f76ef435b46360c434c66c7cdd8512a4d3f605f3))
+
 ## [0.4.1](https://github.com/chemodun/X4LogWatcher/compare/v0.4.0...v0.4.1) (2025-04-11)
 
 
