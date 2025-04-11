@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.1](https://github.com/chemodun/X4LogWatcher/compare/v0.4.0...v0.4.1) (2025-04-11)
+
+
+### Bug Fixes
+
+* content reread after active tab was paused/started (i.e. Enabled is unchecked/checked) and not switched in between ([b89b6b2](https://github.com/chemodun/X4LogWatcher/commit/b89b6b2194ff94e099df3344b43dc9e3b31b9809))
+* old value of regex is used after regex edit and Enables is checked ([b89b6b2](https://github.com/chemodun/X4LogWatcher/commit/b89b6b2194ff94e099df3344b43dc9e3b31b9809))
+
+
+### Documentation
+
+* **bbcode:** Update bbcode files ([01dc23f](https://github.com/chemodun/X4LogWatcher/commit/01dc23f54b204cb539f95fb1361b0c3f0d234566))
+* **bbcode:** Update bbcode files ([18bd899](https://github.com/chemodun/X4LogWatcher/commit/18bd899144e924bd9e925ef5c1d03f3038c2b992))
+* update README - fix mistypings ([6547fd4](https://github.com/chemodun/X4LogWatcher/commit/6547fd4188a4db78ad2428b69f34e82f64390d1a))
+
 ## [0.4.0](https://github.com/chemodun/X4LogWatcher/compare/v0.3.0...v0.4.0) (2025-04-11)
 
 
