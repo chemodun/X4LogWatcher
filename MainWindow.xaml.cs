@@ -262,7 +262,7 @@ namespace X4LogWatcher
     {
       OpenFileDialog openFileDialog = new()
       {
-        Filter = "Log files (*.log)|*.log|All files (*.*)|*.*",
+        Filter = $"Log files (*{appConfig.LogFileExtension})|*{appConfig.LogFileExtension}|All files (*.*)|*.*",
         Title = "Select Log File",
         InitialDirectory = InitialFolderToSelect(),
       };
@@ -348,7 +348,7 @@ namespace X4LogWatcher
       CurrentLogFolder = folderPath;
 
       // Set up a watcher for the folder to detect all log files
-      folderWatcher = new FileSystemWatcher(folderPath, "*.log")
+      folderWatcher = new FileSystemWatcher(folderPath, $"*{appConfig.LogFileExtension}")
       {
         NotifyFilter =
           NotifyFilters.Attributes

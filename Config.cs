@@ -18,6 +18,7 @@ namespace X4LogWatcher
     private ObservableCollection<string> _recentProfiles = new ObservableCollection<string>();
     private string? _activeProfile;
     private string? _lastLogFolderPath;
+    private string? _logFileExtension = ".log";
 
     // Properties with notification
     public ObservableCollection<string> RecentProfiles
@@ -36,6 +37,12 @@ namespace X4LogWatcher
     {
       get => _lastLogFolderPath;
       set => SetProperty(ref _lastLogFolderPath, value);
+    }
+
+    public string? LogFileExtension
+    {
+      get => _logFileExtension;
+      set => SetProperty(ref _logFileExtension, value);
     }
 
     // Constructor to initialize the ObservableCollection
@@ -61,6 +68,7 @@ namespace X4LogWatcher
           RecentProfiles = new List<string>(config.RecentProfiles),
           config.ActiveProfile,
           config.LastLogFolderPath,
+          config.LogFileExtension,
         };
 
         // Serialize the config to JSON and write to file
@@ -102,6 +110,7 @@ namespace X4LogWatcher
 
             config.ActiveProfile = tempConfig.ActiveProfile;
             config.LastLogFolderPath = tempConfig.LastLogFolderPath;
+            config.LogFileExtension = tempConfig.LogFileExtension ?? ".log";
 
             return config;
           }
