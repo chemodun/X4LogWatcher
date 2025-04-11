@@ -159,7 +159,7 @@ namespace X4LogWatcher
     }
 
     // Replace dictionary with TabInfo collection
-    private readonly List<TabInfo> tabs = new();
+    private readonly List<TabInfo> tabs = [];
 
     // Command to close tabs
     private ICommand? _closeTabCommand;
@@ -170,7 +170,7 @@ namespace X4LogWatcher
 
     // Search functionality
     private int currentSearchPosition = -1;
-    private readonly List<int> searchResultPositions = new();
+    private readonly List<int> searchResultPositions = [];
     private TabInfo? currentSearchTab = null;
 
     private bool _isProcessing = false;
@@ -217,11 +217,8 @@ namespace X4LogWatcher
       {
         // Find the TabInfo corresponding to the selected tab
         var selectedTabInfo = tabs.FirstOrDefault(t => t.TabItem == selectedItem);
-        if (selectedTabInfo != null)
-        {
-          // Reset the new content indicator when a tab is selected
-          selectedTabInfo.SetHasNewContent(false);
-        }
+        // Reset the new content indicator when a tab is selected
+        selectedTabInfo?.SetHasNewContent(false);
       }
     }
 
@@ -886,12 +883,12 @@ namespace X4LogWatcher
       try
       {
         _isProcessing = true;
-        List<TabInfo> enabledTabs = new();
+        List<TabInfo> enabledTabs = [];
 
         Dispatcher.Invoke(() => enabledTabs = tabs.Where(t => t.IsWatchingEnabled).ToList());
 
         // If no enabled tabs, exit early
-        if (!enabledTabs.Any())
+        if (enabledTabs.Count == 0)
         {
           _isProcessing = false;
           return;
