@@ -75,7 +75,7 @@ Will work in case if any `watch mode` is enabled.
 
 ## Changelog
 
-### [0.4.0] - 2025-04-11
+### [0.4.1] - 2025-04-11
 
 - Added:
   - Notification symbol "🔔" to the tab name, if the tab is not focused and there are new updates in it.
@@ -84,6 +84,8 @@ Will work in case if any `watch mode` is enabled.
 
 - Fixed:
   - "Tab" order of input elements in the filter form.
+  - Wrong regex is used after editing the filter and Enabling the Tab
+  = Extra content cleanup after pausing the Tab
 
 ### [0.3.0] - 2025-04-09
 
