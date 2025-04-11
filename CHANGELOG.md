@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.4.0](https://github.com/chemodun/X4LogWatcher/compare/v0.3.0...v0.4.0) (2025-04-11)
+
+
+### Features
+
+* add configurable log file extension support ([cfd0d6b](https://github.com/chemodun/X4LogWatcher/commit/cfd0d6b10daf007072243cd228bc0d52e1602133))
+* new content indicators for tabs ([dcbe58b](https://github.com/chemodun/X4LogWatcher/commit/dcbe58be03bb113499f3b5afb51071f856b72e17))
+* new parameter After Lines count, defined how many lines is shown after matched line ([b2d2b80](https://github.com/chemodun/X4LogWatcher/commit/b2d2b802e49e45922b167b32ec3857b95ea6f430))
+
+
+### Code Refactoring
+
+* fixed "tab" order for input elements ([b2d2b80](https://github.com/chemodun/X4LogWatcher/commit/b2d2b802e49e45922b167b32ec3857b95ea6f430))
+* replace dictionary initializations with array syntax for tabs and search results ([87e7152](https://github.com/chemodun/X4LogWatcher/commit/87e715282c450423f02951490596b97c9c00cc5b))
+* tab items edits processing logic ([2cd2063](https://github.com/chemodun/X4LogWatcher/commit/2cd2063d7a8219309237a149ff3681788d73350b))
+
 ## [0.3.0](https://github.com/chemodun/X4LogWatcher/compare/v0.2.0...v0.3.0) (2025-04-09)
 
 
