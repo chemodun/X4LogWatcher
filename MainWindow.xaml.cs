@@ -579,6 +579,7 @@ namespace X4LogWatcher
         if (tabInfo.ValidateRegex() && tabInfo.IsWatchingEnabled && _currentLogFile != null)
         {
           // Reset file position to process from the beginning with new regex
+          tabInfo.UpdateTabHeader();
           tabInfo.FilePosition = 0;
           tabInfo.ClearContent();
           ProcessTabContent(tabInfo);

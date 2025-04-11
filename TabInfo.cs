@@ -72,13 +72,6 @@ namespace X4LogWatcher
         {
           _afterLines = value;
           OnPropertyChanged(nameof(AfterLines));
-
-          // If this tab is watching and the value changed, refresh the content
-          if (IsWatchingEnabled)
-          {
-            FilePosition = 0;
-            ClearContent();
-          }
         }
       }
     }
@@ -121,9 +114,6 @@ namespace X4LogWatcher
     // Validation state
     public bool IsRegexValid { get; private set; }
 
-    // Timer for delayed regex refresh
-    private System.Windows.Threading.DispatcherTimer? regexRefreshTimer;
-
     /// <summary>
     /// Creates a new TabInfo with references to all controls
     /// </summary>
@@ -153,14 +143,6 @@ namespace X4LogWatcher
       HasNewContent = false;
       AfterLines = afterLines;
       AfterLinesCurrent = 0;
-
-      // Initialize timer for delayed refresh
-      regexRefreshTimer = new System.Windows.Threading.DispatcherTimer
-      {
-        Interval = TimeSpan.FromMilliseconds(800), // 800ms delay before refreshing
-        IsEnabled = false,
-      };
-      regexRefreshTimer.Tick += RegexRefreshTimer_Tick;
 
       // Wire up events
       RegexTextBox.TextChanged += RegexTextBox_TextChanged;
@@ -212,16 +194,6 @@ namespace X4LogWatcher
     {
       // Update the regex pattern
       RegexPattern = RegexTextBox.Text;
-
-      // Update the tab header (in case we're displaying the regex)
-      UpdateTabHeader();
-
-      // Reset and restart the timer to delay content refresh
-      if (regexRefreshTimer != null)
-      {
-        regexRefreshTimer.Stop();
-        regexRefreshTimer.Start();
-      }
     }
 
     /// <summary>
@@ -246,21 +218,6 @@ namespace X4LogWatcher
       }
 
       TabItem.Header = displayText;
-    }
-
-    private void RegexRefreshTimer_Tick(object? sender, EventArgs e)
-    {
-      // Stop the timer
-      if (regexRefreshTimer != null)
-        regexRefreshTimer.Stop();
-
-      // Update regex first
-      if (UpdateRegex() && IsWatchingEnabled)
-      {
-        // Signal for content refresh
-        WatchingCheckBox.IsChecked = false;
-        WatchingCheckBox.IsChecked = true;
-      }
     }
 
     /// <summary>
