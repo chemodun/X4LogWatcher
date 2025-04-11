@@ -589,18 +589,34 @@ namespace X4LogWatcher
       // Set up checkbox event to process file when enabled
       chkEnable.Checked += (s, e) =>
       {
-        if (_currentLogFile != null)
+        if (s is CheckBox checkBox)
         {
-          if (tabInfo.FileChangedFlag)
+          if (tabInfo.ValidateRegex())
           {
-            // Reset file position to process from the beginning when enabling a tab
-            tabInfo.FilePosition = 0;
-            tabInfo.ClearContent();
-            tabInfo.FileChangedFlag = false;
+            tabInfo.IsWatchingEnabled = true;
+            tabInfo.UpdateTabHeader();
           }
-
-          // Process this specific tab's content individually when it's enabled
-          ProcessTabContent(tabInfo);
+          else
+          {
+            tabInfo.IsWatchingEnabled = false;
+            checkBox.IsChecked = false;
+          }
+          if (_currentLogFile != null)
+          {
+            if (tabInfo.FileChangedFlag && tabInfo.IsWatchingEnabled)
+            {
+              // Reset file position to process from the beginning when enabling a tab
+              tabInfo.FilePosition = 0;
+              tabInfo.ClearContent();
+              tabInfo.FileChangedFlag = false;
+            }
+            // Process this specific tab's content individually when it's enabled
+            ProcessTabContent(tabInfo);
+          }
+        }
+        else
+        {
+          tabInfo.IsWatchingEnabled = false;
         }
       };
 
@@ -865,7 +881,11 @@ namespace X4LogWatcher
           // Mark files as changed for disabled tabs
           foreach (var tab in tabs.Where(t => !t.IsWatchingEnabled))
           {
-            tab.FileChangedFlag = true;
+            if (tab.TabItem.IsSelected == false)
+            {
+              // Set the file changed flag for disabled non active tabs
+              tab.FileChangedFlag = true;
+            }
           }
         });
       }
@@ -912,6 +932,7 @@ namespace X4LogWatcher
             tab.AfterLinesCurrent = 0; // Reset after lines counter when file is reset
             needFullRead = true;
           }
+          tab.FileChangedFlag = false; // Reset file changed flag
         }
 
         // If file got truncated/replaced, we need to reset positions and re-read
@@ -1071,6 +1092,7 @@ namespace X4LogWatcher
 
     private void ProcessTabContent(TabInfo tab)
     {
+      tab.FileChangedFlag = false;
       if (_currentLogFile == null || !File.Exists(_currentLogFile) || tab.CompiledRegex == null)
         return;
 

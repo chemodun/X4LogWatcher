@@ -151,8 +151,7 @@ namespace X4LogWatcher
 
       AfterLinesNumericUpDown.ValueChanged += AfterLinesNumericUpDown_ValueChanged;
 
-      WatchingCheckBox.Checked += (sender, e) => IsWatchingEnabled = true;
-      WatchingCheckBox.Unchecked += (sender, e) => IsWatchingEnabled = false;
+      WatchingCheckBox.Unchecked += WatchingCheckBox_Unchecked;
 
       // Initialize regex
       UpdateRegex();
@@ -257,6 +256,11 @@ namespace X4LogWatcher
         IsRegexValid = false;
         return false;
       }
+    }
+
+    private void WatchingCheckBox_Unchecked(object sender, RoutedEventArgs e)
+    {
+      IsWatchingEnabled = false;
     }
 
     /// <summary>
