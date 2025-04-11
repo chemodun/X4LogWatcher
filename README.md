@@ -82,7 +82,7 @@ Will work in case if any `watch mode` is enabled.
   - Show up to 10 lines after the matched line in the log file. Useful for showing the error details in the scripts.
   - Support for configurable log file extensions in the application settings.
 
-- Fixed
+- Fixed:
   - "Tab" order of input elements in the filter form.
 
 ### [0.3.0] - 2025-04-09
