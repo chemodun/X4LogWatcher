@@ -75,7 +75,7 @@ Will work in case if any [b]watch mode[/b] is enabled.
 [/list]
 [size=130][u]Changelog[/u][/size]
 
-[size=125][u][0.4.0] - 2025-04-11[/u][/size]
+[size=125][u][0.4.1] - 2025-04-11[/u][/size]
 [list]
 [*] Added:
 [list]
@@ -86,8 +86,10 @@ Will work in case if any [b]watch mode[/b] is enabled.
 [*] Fixed:
 [list]
 [*] "Tab" order of input elements in the filter form.
+[*] Wrong regex is used after editing the filter and Enabling the Tab
 [/list]
-[/list]
+[/list]  = Extra content cleanup after pausing the Tab
+
 [size=125][u][0.3.0] - 2025-04-09[/u][/size]
 [list]
 [*] Added:
