@@ -166,7 +166,19 @@ namespace X4LogWatcher
     public ICommand CloseTabCommand => _closeTabCommand ??= new RelayCommand<string>(CloseTabByPattern);
 
     // Configuration object to store recent profiles
-    private readonly Config appConfig;
+    private Config _appConfig;
+    public Config AppConfig
+    {
+      get => _appConfig;
+      set
+      {
+        if (_appConfig != value)
+        {
+          _appConfig = value;
+          OnPropertyChanged(nameof(AppConfig));
+        }
+      }
+    }
 
     // Search functionality
     private int currentSearchPosition = -1;
@@ -178,6 +190,7 @@ namespace X4LogWatcher
     public MainWindow()
     {
       InitializeComponent();
+      _appConfig = Config.LoadConfig();
       TitleText = titlePrefix;
       // Set DataContext to this to allow bindings to work
       this.DataContext = this;
@@ -195,7 +208,7 @@ namespace X4LogWatcher
       UpdateFileStatus();
 
       // Load application configuration
-      appConfig = Config.LoadConfig();
+      AppConfig = Config.LoadConfig();
 
       // Initialize recent profiles menu
       UpdateRecentProfilesMenu();
@@ -204,9 +217,9 @@ namespace X4LogWatcher
       tabControl.SelectionChanged += TabControl_SelectionChanged;
 
       // Automatically load the active profile if one exists
-      if (!string.IsNullOrEmpty(appConfig.ActiveProfile) && File.Exists(appConfig.ActiveProfile))
+      if (!string.IsNullOrEmpty(AppConfig.ActiveProfile) && File.Exists(AppConfig.ActiveProfile))
       {
-        LoadProfile(appConfig.ActiveProfile);
+        LoadProfile(AppConfig.ActiveProfile);
       }
     }
 
@@ -259,7 +272,7 @@ namespace X4LogWatcher
     {
       OpenFileDialog openFileDialog = new()
       {
-        Filter = $"Log files (*{appConfig.LogFileExtension})|*{appConfig.LogFileExtension}|All files (*.*)|*.*",
+        Filter = $"Log files (*{AppConfig.LogFileExtension})|*{AppConfig.LogFileExtension}|All files (*.*)|*.*",
         Title = "Select Log File",
         InitialDirectory = InitialFolderToSelect(),
       };
@@ -269,7 +282,7 @@ namespace X4LogWatcher
         string selectedFile = openFileDialog.FileName;
 
         // Save the selected folder path to config
-        appConfig.LastLogFolderPath = Path.GetDirectoryName(selectedFile);
+        AppConfig.LastLogFolderPath = Path.GetDirectoryName(selectedFile);
 
         CurrentLogFolder = null;
         IsWatchingFile = true;
@@ -288,9 +301,9 @@ namespace X4LogWatcher
 
     private string InitialFolderToSelect()
     {
-      if (!string.IsNullOrEmpty(appConfig.LastLogFolderPath) && Directory.Exists(appConfig.LastLogFolderPath))
+      if (!string.IsNullOrEmpty(AppConfig.LastLogFolderPath) && Directory.Exists(AppConfig.LastLogFolderPath))
       {
-        return appConfig.LastLogFolderPath;
+        return AppConfig.LastLogFolderPath;
       }
       return Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
     }
@@ -311,7 +324,7 @@ namespace X4LogWatcher
         logFolderPath = dialog.FolderName;
 
         // Save the selected folder path to config
-        appConfig.LastLogFolderPath = logFolderPath;
+        AppConfig.LastLogFolderPath = logFolderPath;
 
         // Update folder info and status line immediately
         _currentLogFolder = dialog.FolderName;
@@ -345,7 +358,7 @@ namespace X4LogWatcher
       CurrentLogFolder = folderPath;
 
       // Set up a watcher for the folder to detect all log files
-      folderWatcher = new FileSystemWatcher(folderPath, $"*{appConfig.LogFileExtension}")
+      folderWatcher = new FileSystemWatcher(folderPath, $"*{AppConfig.LogFileExtension}")
       {
         NotifyFilter =
           NotifyFilters.Attributes
@@ -678,7 +691,7 @@ namespace X4LogWatcher
       File.WriteAllText(profilePath, System.Text.Json.JsonSerializer.Serialize(profileData));
 
       // Add to recent profiles
-      appConfig.AddRecentProfile(profilePath);
+      AppConfig.AddRecentProfile(profilePath);
       UpdateRecentProfilesMenu();
     }
 
@@ -713,7 +726,7 @@ namespace X4LogWatcher
       }
 
       // Update recent profiles
-      appConfig.AddRecentProfile(profilePath);
+      AppConfig.AddRecentProfile(profilePath);
       UpdateRecentProfilesMenu();
     }
 
@@ -737,11 +750,11 @@ namespace X4LogWatcher
       }
 
       // Add recent profiles to the menu
-      if (appConfig.RecentProfiles.Count > 0)
+      if (AppConfig.RecentProfiles.Count > 0)
       {
         menuRecentProfilesHeader.IsEnabled = false; // Keep it as a header
 
-        foreach (var profilePath in appConfig.RecentProfiles)
+        foreach (var profilePath in AppConfig.RecentProfiles)
         {
           // Create a shorter display name (just the filename)
           string displayName = Path.GetFileName(profilePath);
@@ -752,7 +765,7 @@ namespace X4LogWatcher
             Header = displayName,
             Tag = profilePath,
             IsCheckable = true,
-            IsChecked = profilePath == appConfig.ActiveProfile,
+            IsChecked = profilePath == AppConfig.ActiveProfile,
           };
 
           // Add handler to load this profile when clicked
@@ -776,7 +789,7 @@ namespace X4LogWatcher
       if (sender is MenuItem menuItem && menuItem.Tag is string profilePath)
       {
         // Get the current checked state before we make changes
-        bool isActiveProfile = appConfig.ActiveProfile != null && appConfig.ActiveProfile == profilePath;
+        bool isActiveProfile = AppConfig.ActiveProfile != null && AppConfig.ActiveProfile == profilePath;
 
         // Uncheck all profile items
         foreach (var item in menuProfile.Items)
@@ -792,13 +805,13 @@ namespace X4LogWatcher
           // If it wasn't checked before, check it and load the profile
           menuItem.IsChecked = true;
           LoadProfile(profilePath);
-          appConfig.ActiveProfile = profilePath;
+          AppConfig.ActiveProfile = profilePath;
         }
         else
         {
           // If it was checked, keep it unchecked (user wants to deselect)
           menuItem.IsChecked = false;
-          appConfig.ActiveProfile = null;
+          AppConfig.ActiveProfile = null;
         }
       }
     }
@@ -973,6 +986,15 @@ namespace X4LogWatcher
         // Read all lines and their positions
         while ((line = reader.ReadLine()) != null)
         {
+          if (
+            AppConfig.SkipSignatureErrors
+            && (line.Contains("Failed to verify the file signature for file") || line.Contains("Could not find signature file"))
+          )
+            continue;
+          if (AppConfig.RealTimeStamping)
+          {
+            line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " | " + line;
+          }
           fileLines.Add((stream.Position, line));
         }
 
@@ -1128,9 +1150,18 @@ namespace X4LogWatcher
         {
           lineCount++;
           long currentPosition = stream.Position;
+          if (
+            AppConfig.SkipSignatureErrors
+            && (line.Contains("Failed to verify the file signature for file") || line.Contains("Could not find signature file"))
+          )
+            continue;
 
           // Check if line matches regex
           bool isMatch = tab.CompiledRegex.IsMatch(line);
+          if (AppConfig.RealTimeStamping)
+          {
+            line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " | " + line;
+          }
           if (isMatch)
           {
             contentBuilder.AppendLine(line);
@@ -1219,7 +1250,7 @@ namespace X4LogWatcher
       {
         SaveProfile(saveDialog.FileName);
         // Update recent profiles list
-        appConfig.AddRecentProfile(saveDialog.FileName);
+        AppConfig.AddRecentProfile(saveDialog.FileName);
         UpdateRecentProfilesMenu();
 
         MessageBox.Show("Profile saved successfully.", "Save Profile", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -1234,7 +1265,7 @@ namespace X4LogWatcher
       {
         LoadProfile(openDialog.FileName);
         // Update recent profiles list
-        appConfig.AddRecentProfile(openDialog.FileName);
+        AppConfig.AddRecentProfile(openDialog.FileName);
         UpdateRecentProfilesMenu();
       }
     }

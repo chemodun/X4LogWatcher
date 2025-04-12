@@ -18,7 +18,9 @@ namespace X4LogWatcher
     private ObservableCollection<string> _recentProfiles = new ObservableCollection<string>();
     private string? _activeProfile;
     private string? _lastLogFolderPath;
-    private string? _logFileExtension = ".log";
+    private string _logFileExtension = ".log";
+    private bool _skipSignatureErrors = true;
+    private bool _realTimeStamping = false;
 
     // Properties with notification
     public ObservableCollection<string> RecentProfiles
@@ -39,10 +41,22 @@ namespace X4LogWatcher
       set => SetProperty(ref _lastLogFolderPath, value);
     }
 
-    public string? LogFileExtension
+    public string LogFileExtension
     {
       get => _logFileExtension;
       set => SetProperty(ref _logFileExtension, value);
+    }
+
+    public bool SkipSignatureErrors
+    {
+      get => _skipSignatureErrors;
+      set => SetProperty(ref _skipSignatureErrors, value);
+    }
+
+    public bool RealTimeStamping
+    {
+      get => _realTimeStamping;
+      set => SetProperty(ref _realTimeStamping, value);
     }
 
     // Constructor to initialize the ObservableCollection
@@ -69,6 +83,8 @@ namespace X4LogWatcher
           config.ActiveProfile,
           config.LastLogFolderPath,
           config.LogFileExtension,
+          config.SkipSignatureErrors,
+          config.RealTimeStamping,
         };
 
         // Serialize the config to JSON and write to file
@@ -111,7 +127,14 @@ namespace X4LogWatcher
             config.ActiveProfile = tempConfig.ActiveProfile;
             config.LastLogFolderPath = tempConfig.LastLogFolderPath;
             config.LogFileExtension = tempConfig.LogFileExtension ?? ".log";
-
+            if (tempConfig.GetType().GetProperty(nameof(SkipSignatureErrors)) != null)
+            {
+              config.SkipSignatureErrors = tempConfig.SkipSignatureErrors;
+            }
+            if (tempConfig.GetType().GetProperty(nameof(RealTimeStamping)) != null)
+            {
+              config.RealTimeStamping = tempConfig.RealTimeStamping;
+            }
             return config;
           }
         }

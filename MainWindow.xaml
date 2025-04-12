@@ -55,6 +55,15 @@
                       IsCheckable="True"
                       IsChecked="{Binding IsForcedRefreshEnabled}"
                       Click="MenuForcedRefresh_Click"/>
+            <Separator/>
+            <MenuItem x:Name="menuSkipSignatureErrors"
+                        Header="Skip Signature Errors"
+                        IsCheckable="True"
+                        IsChecked="{Binding AppConfig.SkipSignatureErrors, Mode=TwoWay}"/>
+            <MenuItem x:Name="menuRealTimeStamping"
+                        Header="Real Time Stamping"
+                        IsCheckable="True"
+                        IsChecked="{Binding AppConfig.RealTimeStamping, Mode=TwoWay}"/>
 
             <!-- Right-aligned Exit menu item -->
             <MenuItem x:Name="menuExit"
