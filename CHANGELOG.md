@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.5.0](https://github.com/chemodun/X4LogWatcher/compare/v0.4.1...v0.5.0) (2025-04-12)
+
+
+### Features
+
+* add options for skipping signature errors and real-time stamping ([76bc027](https://github.com/chemodun/X4LogWatcher/commit/76bc0270a15ee2ac17c275ecb10b9b0a5af46a7b))
+* update tab header font weight based on new content status ([2304e37](https://github.com/chemodun/X4LogWatcher/commit/2304e37d8399e1973a09e1698107c9082b4d4a92))
+
+
+### Code Refactoring
+
+* adjust tab control header styles to slightly smaller font size ([eaa38d1](https://github.com/chemodun/X4LogWatcher/commit/eaa38d188586e228d315fd32effbe2c7f640c2ad))
+
+
+### Documentation
+
+* **bbcode:** Update bbcode files ([37b7101](https://github.com/chemodun/X4LogWatcher/commit/37b7101e3720fd45ff43062720628a0c10849739))
+* update README - fix mistypings ([f76ef43](https://github.com/chemodun/X4LogWatcher/commit/f76ef435b46360c434c66c7cdd8512a4d3f605f3))
+
 ## [0.4.1](https://github.com/chemodun/X4LogWatcher/compare/v0.4.0...v0.4.1) (2025-04-11)
 
 
