@@ -214,6 +214,11 @@ namespace X4LogWatcher
       if (HasNewContent)
       {
         displayText = "🔔 " + displayText; // Warning symbol to indicate attention needed
+        HeaderedControlHelper.SetHeaderFontWeight(TabItem, FontWeights.Bold);
+      }
+      else
+      {
+        HeaderedControlHelper.SetHeaderFontWeight(TabItem, FontWeights.Normal);
       }
 
       TabItem.Header = displayText;
