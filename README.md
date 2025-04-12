@@ -15,9 +15,11 @@ X4 Log Watcher is a simple tool to monitor the log files of X4: Foundations. It 
 - Support a "Forced refresh" mode, if by some reason standard Windows file watcher doesn't work
 - Support simple text search in current filtered content via Ctrl+F and F3(Enter)/Shift+F3 for next/previous search result
 - Has a status bar with the current log file name and it's stats. Additionally shows the loading progress of the log file in the offline mode
-- Shows the updates in non-focused tabs via adding the notification symbol "🔔" to the tab name
+- Shows the updates in non-focused tabs via "bolding" and adding the notification symbol "🔔" to the tab name
 - Can show up to 10 lines after the matched line in the log file. Useful for showing the error details in the scripts
 - Extension for the log file is configurable via editing of the config file. By default, it is set to `.log`
+- Has option to skip the signature related errors in the log file. By default, it is set to `true`
+- Has option to add "real" timestamp to the filtered content. By default, it is set to `false`
 
 ## Requirements
 
@@ -74,6 +76,16 @@ Will work in case if any `watch mode` is enabled.
 - There is a topic on the [Egosoft forum](https://forum.egosoft.com/viewtopic.php?t=470624), related to this tool.
 
 ## Changelog
+
+### [0.5.0] - 2025-04-12
+
+- Added:
+  - Option to skip the signature related errors in the log file. By default, it is set to `true`.
+  - Option to add "real" timestamp to the filtered content. By default, it is set to `false`.
+  - "Bolding" of the tab name, if the tab is not focused and there are new updates in it.
+
+- Changed:
+  - Font size of the tabs slightly decreased.
 
 ### [0.4.1] - 2025-04-11
 
