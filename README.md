@@ -82,7 +82,7 @@ In this case the regex pattern will look like `\<move\.idle,(?<unique>[^>]+)\>:`
 
 ![AutoTabs items submenu](docs/images/autotabs_menu_item.png)
 
-Program will create tabs for each unique value of the `unique` group. The tabs will be named according to the full regex pattern with prefix "🔄 ", so in this case the tab name will be `🔄 <move.idle,0x75840>`.
+Tool will create tabs for each unique value of the `unique` group. The tabs will be named according to the full regex pattern with prefix "🔄 ", so in this case the tab name will be `🔄 <move.idle,0x75840>`.
 
 ![Result of applying the AutoTabs](docs/images/autotabs_result.png)
 
@@ -101,7 +101,7 @@ In some cases too many tabs can fill a whole window of a tool. There is limitati
 - A short demo showcasing the tool features introduced in version 0.2.0: [X4 Log Watcher Demo](https://youtube.com/watch?v=6cPAfx4gxTA).
 - A short demo showcasing the new features introduced in version 0.3.0: [X4 Log Watcher Demo - Version 0.3.0](https://youtube.com/watch?v=wRRwymDHv1g).
 - A short demo showcasing the new features introduced in version 0.4.0: [X4 Log Watcher Demo - Version 0.4.0](https://youtube.com/watch?v=1LO7Upyd3ZM).
-- A short demo showcasing the new features introduced in version 0.4.0: [X4 Log Watcher Demo - Version 0.6.0](https://youtube.com/watch?v=a77PBN25-jo).
+- A short demo showcasing the new features introduced in version 0.6.0: [X4 Log Watcher Demo - Version 0.6.0](https://youtube.com/watch?v=a77PBN25-jo).
 - There is a topic on the [Egosoft forum](https://forum.egosoft.com/viewtopic.php?t=470624), related to this tool.
 
 ## Changelog
