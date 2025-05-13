@@ -62,21 +62,61 @@ To use X4 Log Watcher, follow these steps:
 [spoiler][img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/common_errors_parsing.png[/img][/spoiler]
 [spoiler][img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/exact_ship_monitoring.png[/img][/spoiler]
 
+[size=130][u]AutoTabs feature[/u][/size]
+
+From version 0.6.0 onwards, the application supports the AutoTabs feature. This feature allows you to automatically create tabs based on the log file content. The application will analyze the log file and create tabs for each unique entry, making it easier to monitor multiple entries simultaneously.
+
+The key point of it - the regular expression pattern with mandatory named group [b]unique[/b]. The tool will check the log lines against this pattern and create tabs for each unique match.
+
+Let's assume we need an AutoTabs for the [b]move.idle[/b] script.
+Log line looks like this:
+
+[code=log]
+[Scripts] 1689391.54 *** aicontext<move.idle,0x75840>: about to finish idle. moving to anchor position.
+[/code]
+
+In this case the regex pattern will look like [b]\<move\.idle,(?<unique>[^>]+)\>:[/b].
+[spoiler][img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/autotabs_menu_empty.png[/img][/spoiler]
+
+[spoiler][img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/autotabs_edit_pattern.png[/img][/spoiler]
+
+[spoiler][img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/autotabs_menu_item.png[/img][/spoiler]
+
+Program will create tabs for each unique value of the [b]unique[/b] group. The tabs will be named according to the full regex pattern with prefix "🔄 ", so in this case the tab name will be [b]🔄 <move.idle,0x75840>[/b].
+
+[spoiler][img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/autotabs_result.png[/img][/spoiler]
+
+But you are not limited to one script. For example, if needed to monitor all command with [b]move.[/b] prefix, the regex pattern will look like [b]\<move\.[^,]+,(?<unique2>[^>]+)\>:[/b]. And all log lines with [b]move.[/b] prefix will be split into separate tabs, per ship object id.
+
 [size=130][u]Known Issues[/u][/size]
 
 In some cases, the application may not detect changes in the log file. If this happens, you can enable the "Forced refresh" mode in the menu. This will force the application to check for changes in the log file at regular intervals.
 
 Will work in case if any [b]watch mode[/b] is enabled.
 
+In some cases too many tabs can fill a whole window of a tool. There is limitation of used framework. Let's limit an AutoTabs feature in this case.
+
 [size=130][u]Links[/u][/size]
 [list]
 [*] A short demo showcasing the tool features introduced in version 0.2.0: [url=https://youtube.com/watch?v=6cPAfx4gxTA]X4 Log Watcher Demo[/url].
 [*] A short demo showcasing the new features introduced in version 0.3.0: [url=https://youtube.com/watch?v=wRRwymDHv1g]X4 Log Watcher Demo - Version 0.3.0[/url].
 [*] A short demo showcasing the new features introduced in version 0.4.0: [url=https://youtube.com/watch?v=1LO7Upyd3ZM]X4 Log Watcher Demo - Version 0.4.0[/url].
+[*] A short demo showcasing the new features introduced in version 0.4.0: [url=https://youtube.com/watch?v=a77PBN25-jo]X4 Log Watcher Demo - Version 0.6.0[/url].
 [*] There is a topic on the [url=https://forum.egosoft.com/viewtopic.php?t=470624]Egosoft forum[/url], related to this tool.
 [/list]
 [size=130][u]Changelog[/u][/size]
 
+[size=125][u][0.6.0] - 2025-04-13[/u][/size]
+[list]
+[*] Added:
+[list]
+[*] AutoTabs feature - automatically create tabs based on the appropriate regex pattern from log file content.
+[/list]
+[*] Changed:
+[list]
+[*] Font size of the tabs slightly decreased. To cover the AutoTabs feature.
+[/list]
+[/list]
 [size=125][u][0.5.0] - 2025-04-12[/u][/size]
 [list]
 [*] Added:
