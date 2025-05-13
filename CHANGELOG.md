@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.6.1](https://github.com/chemodun/X4LogWatcher/compare/v0.6.0...v0.6.1) (2025-05-13)
+
+
+### Documentation
+
+* **bbcode:** Update bbcode files ([6b1e77c](https://github.com/chemodun/X4LogWatcher/commit/6b1e77c465617b58e27697469a6a8dc0c7620980))
+* **bbcode:** Update bbcode files ([32b31d7](https://github.com/chemodun/X4LogWatcher/commit/32b31d79d6924741bfe6556296900e60cd51c5ee))
+* update README for clarity and correct demo link ([3e15f94](https://github.com/chemodun/X4LogWatcher/commit/3e15f945e55474a78e6cee8811c69eaf8dd547fd))
+
 ## [0.6.0](https://github.com/chemodun/X4LogWatcher/compare/v0.5.0...v0.6.0) (2025-05-13)
 
 
