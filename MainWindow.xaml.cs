@@ -496,35 +496,6 @@ namespace X4LogWatcher
       Grid.SetRow(lblName, 0);
       mainGrid.Children.Add(lblName);
 
-      // Add auto-created indicator if applicable
-      if (isAutoCreated)
-      {
-        var autoIndicator = new Border
-        {
-          Background = new SolidColorBrush(Colors.LightBlue),
-          BorderBrush = new SolidColorBrush(Colors.Navy),
-          BorderThickness = new Thickness(1),
-          CornerRadius = new CornerRadius(3),
-          Margin = new Thickness(5, 0, 5, 0),
-          Padding = new Thickness(5, 2, 5, 2),
-          VerticalAlignment = VerticalAlignment.Center,
-          ToolTip = "This tab was automatically created by an auto tab rule",
-        };
-
-        var autoText = new TextBlock
-        {
-          Text = "Auto",
-          FontSize = 10,
-          Foreground = new SolidColorBrush(Colors.Navy),
-        };
-
-        autoIndicator.Child = autoText;
-        Grid.SetColumn(autoIndicator, 2);
-        Grid.SetRow(autoIndicator, 0);
-        Grid.SetZIndex(autoIndicator, 1);
-        mainGrid.Children.Add(autoIndicator);
-      }
-
       // Add the tab name input textbox (fills remaining space)
       var txtName = new TextBox
       {
@@ -616,18 +587,7 @@ namespace X4LogWatcher
       contentPanel.Child = txtContent;
 
       // Create and store TabInfo object
-      var tabInfo = new TabInfo(
-        tabItem,
-        chkEnable,
-        txtName,
-        txtRegex,
-        numAfterLines,
-        txtContent,
-        regexPattern,
-        afterLines,
-        isEnabled,
-        isAutoCreated
-      );
+      var tabInfo = new TabInfo(tabItem, chkEnable, txtName, txtRegex, numAfterLines, txtContent, isAutoCreated);
       tabs.Add(tabInfo);
 
       // Set up Apply button click handler using the TabInfo object
@@ -767,6 +727,11 @@ namespace X4LogWatcher
           // Clear and load auto tab configurations
           autoTabConfigs.Clear();
           autoTabConfigs.AddRange(profile.AutoTabConfigs);
+          foreach (var config in autoTabConfigs)
+          {
+            config.UpdateRegex();
+          }
+          MenuAutoTabs_Click(this, new RoutedEventArgs());
 
           // Add tabs from the profile
           foreach (var item in profile.Tabs)
@@ -909,7 +874,6 @@ namespace X4LogWatcher
 
       // Store the previous file path before updating
       string? previousLogFile = _currentLogFile;
-      bool isFileChanged = previousLogFile != filePath;
 
       // Update the current file path
       CurrentLogFile = filePath;
@@ -939,12 +903,15 @@ namespace X4LogWatcher
       };
 
       fileWatcher.Changed += OnSingleFileChanged;
-
-      // Handle tab states based on file change
-      if (isFileChanged)
+      List<TabInfo> tabsToClose = [];
+      // Inform all tabs about the file change
+      foreach (var tab in tabs)
       {
-        // Inform all tabs about the file change
-        foreach (var tab in tabs)
+        if (tab.IsAutoCreated)
+        {
+          tabsToClose.Add(tab);
+        }
+        else
         {
           tab.FileChangedFlag = true;
           if (tab.IsWatchingEnabled)
@@ -957,13 +924,19 @@ namespace X4LogWatcher
             tab.ClearContent();
           }
         }
-        ProcessAllEnabledTabsParallel();
       }
-      else
+      // Remove auto-created tabs
+      foreach (var tab in tabsToClose)
       {
-        // If the file is the same, just process enabled tabs
-        ProcessAllEnabledTabsParallel();
+        CloseTab(tab);
       }
+
+      foreach (var config in autoTabConfigs)
+      {
+        config.ResetTabs();
+      }
+
+      ProcessAllEnabledTabsParallel();
     }
 
     private void OnSingleFileChanged(object sender, FileSystemEventArgs e)
@@ -1822,22 +1795,21 @@ namespace X4LogWatcher
           continue;
 
         var match = config.CompiledRegex.Match(line);
-        if (match.Success && match.Groups.Count > Math.Max(config.ConstantGroupNumber, config.VariableGroupNumber))
+        if (match.Success && match.Groups["unique"].Value != null)
         {
-          // We have a match - extract the variable value
-          string variableValue = match.Groups[config.VariableGroupNumber].Value;
+          // We have a match - extract the unique value
+          string uniqueValue = match.Groups["unique"].Value;
 
-          if (config.LinkedTabs.IndexOf(variableValue) >= 0)
+          if (config.LinkedTabsIds.IndexOf(uniqueValue) >= 0)
           {
-            // We found an existing tab for this auto tab pattern and variable
+            // We found an existing tab for this auto tab pattern and unique value
             return null;
           }
-          config.LinkedTabs.Add(variableValue);
+          config.LinkedTabsIds.Add(uniqueValue);
 
           // We need to create a new tab
-          string constantPart = match.Groups[config.ConstantGroupNumber].Value;
-          string tabName = $"Auto: {constantPart} - {variableValue}";
-          string tabRegex = config.GenerateTabRegexPattern(variableValue);
+          string tabName = $"Auto: {match.Value}";
+          string tabRegex = config.GenerateTabRegexPattern(uniqueValue);
 
           // Create the new tab
           TabInfo? newTab = null;

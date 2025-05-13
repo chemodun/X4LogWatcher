@@ -1,4 +1,5 @@
 using System;
+using System.Data.Common;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
@@ -7,7 +8,7 @@ namespace X4LogWatcher
   /// <summary>
   /// Class used for configuring auto-tabs based on regex pattern matching
   /// </summary>
-  public class AutoTabConfig
+  public partial class AutoTabConfig
   {
     /// <summary>
     /// Regex pattern to match log lines
@@ -22,17 +23,9 @@ namespace X4LogWatcher
     public Regex? CompiledRegex { get; private set; }
 
     /// <summary>
-    /// Group number for the constant part of the pattern
+    /// Content the unique part of the regex
     /// </summary>
-    [JsonPropertyName("constantGroupNumber")]
-    public int ConstantGroupNumber { get; set; }
-
-    /// <summary>
-    /// Group number for the variable part of the pattern
-    /// (this will be used to generate unique tab names)
-    /// </summary>
-    [JsonPropertyName("variableGroupNumber")]
-    public int VariableGroupNumber { get; set; }
+    private string VariablePattern { get; set; } = string.Empty;
 
     /// <summary>
     /// Whether this auto-tab configuration is enabled
@@ -46,8 +39,11 @@ namespace X4LogWatcher
     [JsonPropertyName("afterLines")]
     public int AfterLines { get; set; } = 0;
 
+    /// <summary>
+    /// List of tabs IDs (unique parts of patterns) linked to this auto-tab configuration
+    /// </summary>
     [JsonIgnore]
-    public List<string> LinkedTabs { get; set; } = [];
+    public List<string> LinkedTabsIds { get; set; } = [];
 
     /// <summary>
     /// Default constructor for JSON deserialization
@@ -57,11 +53,9 @@ namespace X4LogWatcher
     /// <summary>
     /// Constructor with parameters
     /// </summary>
-    public AutoTabConfig(string patternRegex, int constantGroupNumber, int variableGroupNumber, int afterLines = 0, bool isEnabled = true)
+    public AutoTabConfig(string patternRegex, int afterLines = 0, bool isEnabled = true)
     {
       PatternRegex = patternRegex;
-      ConstantGroupNumber = constantGroupNumber;
-      VariableGroupNumber = variableGroupNumber;
       AfterLines = afterLines;
       IsEnabled = isEnabled;
       UpdateRegex();
@@ -76,7 +70,7 @@ namespace X4LogWatcher
       try
       {
         CompiledRegex = new Regex(PatternRegex);
-        return true;
+        return ExtractUniquePattern();
       }
       catch
       {
@@ -86,98 +80,42 @@ namespace X4LogWatcher
     }
 
     /// <summary>
+    /// Extracts capturing groups from the regex pattern
+    /// </summary>
+    bool ExtractUniquePattern()
+    {
+      string groupRegex = $@"\(\?<(unique)>(.*?)\)";
+      Match match = Regex.Match(PatternRegex, groupRegex);
+
+      if (match.Success && match.Groups.Count > 2)
+      {
+        VariablePattern = match.Value;
+        return true;
+      }
+
+      return false; //
+    }
+
+    public void ResetTabs()
+    {
+      LinkedTabsIds.Clear();
+    }
+
+    /// <summary>
     /// Generates a regex pattern for a tab based on a matched value
     /// </summary>
-    /// <param name="variableValue">The value extracted from the variable group</param>
+    /// <param name="uniqueValue">The value extracted from the unique group</param>
     /// <returns>A regex pattern string</returns>
-    public string GenerateTabRegexPattern(string variableValue)
+    public string GenerateTabRegexPattern(string uniqueValue)
     {
-      // Make sure regex special characters in the variable value are escaped
-      string escapedVariableValue = Regex.Escape(variableValue);
-      string variableGroupPattern = GetCaptureGroup(PatternRegex, VariableGroupNumber);
-      return PatternRegex.Replace(variableGroupPattern, escapedVariableValue);
+      // Make sure regex special characters in the unique value are escaped
+      string escapedUniqueValue = Regex.Escape(uniqueValue);
+      // Replace the unique group in the pattern with the escaped value
+      return PatternRegex.Replace(VariablePattern, escapedUniqueValue);
     }
 
     /// <summary>
-    /// Counts the number of capture groups in a regex pattern substring
-    /// </summary>
-    private static int CountCaptureGroups(string pattern)
-    {
-      // Count the number of opening parentheses that aren't escaped or part of a non-capturing group
-      int count = 0;
-      bool escaped = false;
-
-      for (int i = 0; i < pattern.Length; i++)
-      {
-        if (pattern[i] == '\\' && !escaped)
-        {
-          escaped = true;
-        }
-        else if (pattern[i] == '(' && !escaped)
-        {
-          // Check if it's not a non-capturing group (?:...)
-          if (i + 2 < pattern.Length && pattern[i + 1] == '?' && pattern[i + 2] == ':')
-          {
-            // This is a non-capturing group
-          }
-          else
-          {
-            count++;
-          }
-          escaped = false;
-        }
-        else
-        {
-          escaped = false;
-        }
-      }
-
-      return count;
-    }
-
-    /// <summary>
-    /// Extracts the nth capture group from a regex pattern
-    /// </summary>
-    private static string GetCaptureGroup(string pattern, int groupIndex)
-    {
-      // Find the nth capture group in the regex pattern
-      int count = 0;
-      bool escaped = false;
-
-      for (int i = 0; i < pattern.Length; i++)
-      {
-        if (pattern[i] == '\\' && !escaped)
-        {
-          escaped = true;
-        }
-        else if (pattern[i] == '(' && !escaped)
-        {
-          // Check if it's not a non-capturing group (?:...)
-          if (i + 2 < pattern.Length && pattern[i + 1] == '?' && pattern[i + 2] == ':')
-          {
-            // This is a non-capturing group
-          }
-          else
-          {
-            count++;
-            if (count == groupIndex)
-            {
-              return pattern.Substring(i);
-            }
-          }
-          escaped = false;
-        }
-        else
-        {
-          escaped = false;
-        }
-      }
-
-      return string.Empty; // No such group found
-    }
-
-    /// <summary>
-    /// Validates the regex pattern and group numbers
+    /// Validates the regex pattern and named groups
     /// </summary>
     /// <returns>True if valid, false otherwise</returns>
     public bool Validate()
@@ -187,11 +125,8 @@ namespace X4LogWatcher
         // Try to compile the regex
         var regex = new Regex(PatternRegex);
 
-        // Count the number of capture groups
-        int groupCount = CountCaptureGroups(PatternRegex);
-
-        // Check if the group numbers are valid
-        if (ConstantGroupNumber < 1 || ConstantGroupNumber > groupCount || VariableGroupNumber < 1 || VariableGroupNumber > groupCount)
+        // Check if the unique named group is valid
+        if (!ExtractUniquePattern())
         {
           return false;
         }

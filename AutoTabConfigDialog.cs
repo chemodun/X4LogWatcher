@@ -33,34 +33,8 @@ namespace X4LogWatcher
       {
         MessageBox.Show("Pattern cannot be empty.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
         return;
-      }
-
-      // Update the regex
+      } // Update the regex
       AutoTabConfig.PatternRegex = txtPattern.Text;
-
-      if (!int.TryParse(txtConstantGroup.Text, out int constantGroup) || constantGroup < 1)
-      {
-        MessageBox.Show(
-          "Constant group number must be a positive integer.",
-          "Validation Error",
-          MessageBoxButton.OK,
-          MessageBoxImage.Warning
-        );
-        return;
-      }
-      AutoTabConfig.ConstantGroupNumber = constantGroup;
-
-      if (!int.TryParse(txtVariableGroup.Text, out int variableGroup) || variableGroup < 1)
-      {
-        MessageBox.Show(
-          "Variable group number must be a positive integer.",
-          "Validation Error",
-          MessageBoxButton.OK,
-          MessageBoxImage.Warning
-        );
-        return;
-      }
-      AutoTabConfig.VariableGroupNumber = variableGroup;
 
       if (!int.TryParse(txtAfterLines.Text, out int afterLines) || afterLines < 0)
       {
@@ -74,15 +48,18 @@ namespace X4LogWatcher
       // Validate the regex pattern
       if (!AutoTabConfig.UpdateRegex())
       {
-        MessageBox.Show("Invalid regex pattern.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+        MessageBox.Show(
+          "Invalid regex pattern. Pattern must include a named group '?<unique>'.",
+          "Validation Error",
+          MessageBoxButton.OK,
+          MessageBoxImage.Warning
+        );
         return;
-      }
-
-      // Validate the configuration
+      } // Validate the configuration
       if (!AutoTabConfig.Validate())
       {
         MessageBox.Show(
-          "Invalid auto tab configuration. Make sure the group numbers exist in the pattern.",
+          "Invalid auto tab configuration. Make sure your pattern contains the named capturing group '?<unique>'.",
           "Validation Error",
           MessageBoxButton.OK,
           MessageBoxImage.Warning
@@ -98,6 +75,25 @@ namespace X4LogWatcher
     {
       DialogResult = false;
       Close();
+    }
+
+    private void BtnDelete_Click(object sender, RoutedEventArgs e)
+    {
+      // Show confirmation dialog
+      var result = MessageBox.Show(
+        "Are you sure you want to delete this auto tab configuration?",
+        "Confirm Deletion",
+        MessageBoxButton.YesNo,
+        MessageBoxImage.Question
+      );
+
+      if (result == MessageBoxResult.Yes)
+      {
+        // Return with a special result to indicate deletion
+        Tag = "DELETE"; // We'll use the Tag property to communicate deletion intent
+        DialogResult = true;
+        Close();
+      }
     }
   }
 }

@@ -7,10 +7,9 @@
         xmlns:Controls="http://metro.mahapps.com/winfx/xaml/controls"
         mc:Ignorable="d"
         Title="Auto Tab Configuration" Height="520" Width="600"
-        WindowStartupLocation="CenterOwner">    <Grid Margin="10">
+        WindowStartupLocation="CenterOwner">
+          <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -20,34 +19,25 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="180"/>
             <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-
-        <!-- Description -->
+        </Grid.ColumnDefinitions><!-- Description -->
         <TextBlock Grid.Row="0" Grid.ColumnSpan="2" TextWrapping="Wrap" Margin="0,0,0,15">
             Auto tabs allow you to dynamically create tabs based on log line patterns.
-            The pattern must contain at least two capture groups: one for the constant part
-            (identifying the tab type) and one for the variable part (for unique instances).
+            The pattern must contain a named capturing group "unique" for the part that creates unique instances.
+            Everything outside the unique group is treated as constant and identifies the tab type.
+            Example: Error: (?&lt;unique&gt;.*?) in module .*
         </TextBlock>
 
         <!-- Pattern input -->
         <Label Grid.Row="1" Grid.Column="0" Content="Pattern Regex:" VerticalAlignment="Center"/>
-        <TextBox Grid.Row="1" Grid.Column="1" Name="txtPattern" Text="{Binding PatternRegex}" Margin="0,5" ToolTip="Regular expression with at least two capture groups. Example: (Error|Warning): (.*) in module (.*)"/>
-
-        <!-- Constant Group Number -->
-        <Label Grid.Row="2" Grid.Column="0" Content="Constant Group Number:" VerticalAlignment="Center"/>
-        <TextBox Grid.Row="2" Grid.Column="1" Name="txtConstantGroup" Text="{Binding ConstantGroupNumber}" Margin="0,5" ToolTip="Group number that identifies the tab type (constant part)"/>
-
-        <!-- Variable Group Number -->
-        <Label Grid.Row="3" Grid.Column="0" Content="Variable Group Number:" VerticalAlignment="Center"/>
-        <TextBox Grid.Row="3" Grid.Column="1" Name="txtVariableGroup" Text="{Binding VariableGroupNumber}" Margin="0,5" ToolTip="Group number that identifies unique tab instances (variable part)"/>
+        <TextBox Grid.Row="1" Grid.Column="1" Name="txtPattern" Text="{Binding PatternRegex}" Margin="0,5" ToolTip="Regular expression with a named group 'unique'. Example: Error: (?&lt;unique&gt;.*?) in module .*"/>
 
         <!-- After Lines -->
-        <Label Grid.Row="4" Grid.Column="0" Content="After Lines:" VerticalAlignment="Center"/>
-        <TextBox Grid.Row="4" Grid.Column="1" Name="txtAfterLines" Text="{Binding AfterLines}" Margin="0,5" ToolTip="Number of lines to show after a match"/>        <!-- Enabled Checkbox -->
-        <CheckBox Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Name="chkEnabled" Content="Enabled" IsChecked="{Binding IsEnabled}" Margin="0,10"/>
+        <Label Grid.Row="2" Grid.Column="0" Content="After Lines:" VerticalAlignment="Center"/>
+        <TextBox Grid.Row="2" Grid.Column="1" Name="txtAfterLines" Text="{Binding AfterLines}" Margin="0,5" ToolTip="Number of lines to show after a match"/>        <!-- Enabled Checkbox -->
+        <CheckBox Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Name="chkEnabled" Content="Enabled" IsChecked="{Binding IsEnabled}" Margin="0,10"/>
 
         <!-- Buttons -->
-        <StackPanel Grid.Row="6" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+        <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
             <Button Name="btnOK" Content="OK" Click="BtnOK_Click" Width="80" Margin="5,0"/>
             <Button Name="btnCancel" Content="Cancel" Click="BtnCancel_Click" Width="80" Margin="5,0"/>
         </StackPanel>

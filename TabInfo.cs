@@ -141,9 +141,6 @@ namespace X4LogWatcher
       TextBox regexTextBox,
       NumericUpDown afterLinesTextBox,
       TextBox contentTextBox,
-      string pattern,
-      int afterLines,
-      bool enabled,
       bool isAutoCreated = false
     )
     {
@@ -154,12 +151,13 @@ namespace X4LogWatcher
       ContentTextBox = contentTextBox;
       NameTextBox = nameTextBox;
 
-      RegexPattern = pattern;
-      IsWatchingEnabled = enabled;
+      TabName = NameTextBox.Text;
+      RegexPattern = RegexTextBox.Text;
+      IsWatchingEnabled = watchingCheckBox.IsChecked ?? false;
       FilePosition = 0;
       FileChangedFlag = false;
       HasNewContent = false;
-      AfterLines = afterLines;
+      AfterLines = afterLinesTextBox.Value.HasValue ? (int)afterLinesTextBox.Value : 0;
       AfterLinesCurrent = 0;
       IsAutoCreated = isAutoCreated;
 

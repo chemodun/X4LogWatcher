@@ -39,6 +39,10 @@
                 <!-- Placeholder for recent profile items that will be added programmatically -->
             </MenuItem>
 
+            <MenuItem x:Name="menuAutoTabs"
+                      Header="Auto Tabs"
+                      Click="MenuAutoTabs_Click"/>
+            <Separator/>
             <!-- Left-aligned menu items -->
             <MenuItem x:Name="menuWatchLogFile"
                       Header="Watch File"
