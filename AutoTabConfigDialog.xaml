@@ -6,11 +6,11 @@
         xmlns:local="clr-namespace:X4LogWatcher"
         xmlns:Controls="http://metro.mahapps.com/winfx/xaml/controls"
         mc:Ignorable="d"
-        Title="Auto Tab Configuration" Height="520" Width="600"
+        Title="Auto Tab Configuration" Height="320" Width="600"
         WindowStartupLocation="CenterOwner">
           <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -21,20 +21,20 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions><!-- Description -->
         <TextBlock Grid.Row="0" Grid.ColumnSpan="2" TextWrapping="Wrap" Margin="0,0,0,15">
-            Auto tabs allow you to dynamically create tabs based on log line patterns.
-            The pattern must contain a named capturing group "unique" for the part that creates unique instances.
-            Everything outside the unique group is treated as constant and identifies the tab type.
-            Example: Error: (?&lt;unique&gt;.*?) in module .*
+            Auto tabs allow you to dynamically create tabs based on log line patterns.<LineBreak/>
+            The pattern must contain a named capturing group "unique" for the part that creates unique instances.<LineBreak/>
+            Everything outside the unique group is treated as constant and identifies the tab type.<LineBreak/><LineBreak/>
+            Example: <LineBreak/>      Error: (?&lt;unique&gt;.*?) in module .*
         </TextBlock>
 
+        <CheckBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Name="chkEnabled" Content="Enabled" IsChecked="{Binding IsEnabled}" Margin="0,10"/>
         <!-- Pattern input -->
-        <Label Grid.Row="1" Grid.Column="0" Content="Pattern Regex:" VerticalAlignment="Center"/>
-        <TextBox Grid.Row="1" Grid.Column="1" Name="txtPattern" Text="{Binding PatternRegex}" Margin="0,5" ToolTip="Regular expression with a named group 'unique'. Example: Error: (?&lt;unique&gt;.*?) in module .*"/>
+        <Label Grid.Row="2" Grid.Column="0" Content="Pattern Regex:" VerticalAlignment="Center"/>
+        <TextBox Grid.Row="2" Grid.Column="1" Name="txtPattern" Text="{Binding PatternRegex}" Margin="0,5" ToolTip="Regular expression with a named group 'unique'. Example: Error: (?&lt;unique&gt;.*?) in module .*"/>
 
         <!-- After Lines -->
-        <Label Grid.Row="2" Grid.Column="0" Content="After Lines:" VerticalAlignment="Center"/>
-        <TextBox Grid.Row="2" Grid.Column="1" Name="txtAfterLines" Text="{Binding AfterLines}" Margin="0,5" ToolTip="Number of lines to show after a match"/>        <!-- Enabled Checkbox -->
-        <CheckBox Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Name="chkEnabled" Content="Enabled" IsChecked="{Binding IsEnabled}" Margin="0,10"/>
+        <Label Grid.Row="3" Grid.Column="0" Content="After Lines:" VerticalAlignment="Center"/>
+        <TextBox Grid.Row="3" Grid.Column="1" Name="txtAfterLines" Text="{Binding AfterLines}" Margin="0,5" ToolTip="Number of lines to show after a match"/>        <!-- Enabled Checkbox -->
 
         <!-- Buttons -->
         <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">

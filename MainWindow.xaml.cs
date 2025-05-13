@@ -757,6 +757,7 @@ namespace X4LogWatcher
             }
             tabs.Clear();
             autoTabConfigs.Clear();
+            MenuAutoTabs_Click(this, new RoutedEventArgs());
 
             // Add tabs from the old format profile
             foreach (var item in oldFormatData)
