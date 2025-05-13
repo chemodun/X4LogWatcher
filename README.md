@@ -82,7 +82,7 @@ In this case the regex pattern will look like `\<move\.idle,(?<unique>[^>]+)\>:`
 
 ![AutoTabs items submenu](docs/images/autotabs_menu_item.png)
 
-Tool will create tabs for each unique value of the `unique` group. The tabs will be named according to the full regex pattern with prefix "🔄 ", so in this case the tab name will be `🔄 <move.idle,0x75840>`.
+Tool will create tabs for each unique value of the `unique` group. The tabs will be named according to the full regex pattern with prefix "🔄", so in this case the tab name will be `🔄 <move.idle,0x75840>`.
 
 ![Result of applying the AutoTabs](docs/images/autotabs_result.png)
 
