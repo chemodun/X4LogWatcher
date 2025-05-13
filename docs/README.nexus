@@ -1,0 +1,171 @@
+[size=4][u]X4 Log Watcher[/u][/size]
+
+X4 Log Watcher is a simple tool to monitor the log files of X4: Foundations. It provides a graphical interface to view and filter log entries, making it easier to analyze the game's output.
+
+[size=3][u][b]Features[/b][/u][/size]
+[list]
+[*] Real-time log monitoring
+[*] Filter log entries by regular expressions
+[*] Multi-tabbed interface for filtering the same log file
+[*] Enable/disable filters on the fly per each tab
+[*] Watch not only the exact log file but also the parent directory to reload the log file when new log files are created
+[*] Support profiles saving and loading - i.e. current tabs with filters
+[*] Offline mode - i.e. load the log file from disk and parse it
+[*] Loading default profile on startup
+[*] Support a "Forced refresh" mode, if by some reason standard Windows file watcher doesn't work
+[*] Support simple text search in current filtered content via Ctrl+F and F3(Enter)/Shift+F3 for next/previous search result
+[*] Has a status bar with the current log file name and it's stats. Additionally shows the loading progress of the log file in the offline mode
+[*] Shows the updates in non-focused tabs via "bolding" and adding the notification symbol "🔔" to the tab name
+[*] Can show up to 10 lines after the matched line in the log file. Useful for showing the error details in the scripts
+[*] Extension for the log file is configurable via editing of the config file. By default, it is set to [b].log[/b]
+[*] Has option to skip the signature related errors in the log file. By default, it is set to [b]true[/b]
+[*] Has option to add "real" timestamp to the filtered content. By default, it is set to [b]false[/b]
+[/list]
+[size=3][u][b]Requirements[/b][/u][/size]
+
+Windows 10 or later
+
+[size=3][u][b]Installation[/b][/u][/size]
+
+Simply download a [b]X4LogWatcher.zip[/b] file from:
+[list]
+[*] Nexus Mods [url=https://www.nexusmods.com/x4foundations/mods/1669]X4 Log Watcher[/url]
+[*] GitHub [url=https://github.com/chemodun/x4logwatcher/releases]Releases page[/url].
+[/list]
+And then extract it to your desired location. Then, run the executable to start the application.
+
+[size=3][u][b]Important Note[/b][/u][/size]
+
+Please ensure that you started the X4 with appropriate command line switches to produce a log files.
+Details on how to do this can be found in the [url=https://wiki.egosoft.com:1337/X4%20Foundations%20Wiki/Modding%20Support/ScriptingMD/Community%20Guides/h2odragon%27s%20HOWTO-hackx4f/#debug-log]HOWTO - Hacking X4 Foundations[/url]
+
+[b]Notice:[/b] Please set the extension for the debug log to [b].log[/b]!
+
+[size=3][u][b]Usage[/b][/u][/size]
+
+To use X4 Log Watcher, follow these steps:
+[list]
+[*] Launch the application.
+[/list]
+[img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/first_start.png[/img]
+[list]
+[*] Use the filtering options to customize the log entries displayed.
+[/list]
+[img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/several_tabs.png[/img]
+[list]
+[*] Save your profile for future sessions.
+[/list]
+[img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/profile_management.png[/img]
+[list]
+[*] Select the log file you want to monitor or choose a directory to watch.
+[/list]
+[img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/common_errors_parsing.png[/img]
+[img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/exact_ship_monitoring.png[/img]
+
+[size=3][u][b]AutoTabs feature[/b][/u][/size]
+
+From version 0.6.0 onwards, the application supports the AutoTabs feature. This feature allows you to automatically create tabs based on the log file content. The application will analyze the log file and create tabs for each unique entry, making it easier to monitor multiple entries simultaneously.
+
+The key point of it - the regular expression pattern with mandatory named group [b]unique[/b]. The tool will check the log lines against this pattern and create tabs for each unique match.
+
+Let's assume we need an AutoTabs for the [b]move.idle[/b] script.
+Log line looks like this:
+
+[code]
+[Scripts] 1689391.54 *** aicontext<move.idle,0x75840>: about to finish idle. moving to anchor position.
+[/code]
+
+In this case the regex pattern will look like [b]\<move\.idle,(?<unique>[^>]+)\>:[/b].
+[img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/autotabs_menu_empty.png[/img]
+
+[img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/autotabs_edit_pattern.png[/img]
+
+[img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/autotabs_menu_item.png[/img]
+
+Tool will create tabs for each unique value of the [b]unique[/b] group. The tabs will be named according to the full regex pattern with prefix "🔄", so in this case the tab name will be [b]🔄 <move.idle,0x75840>[/b].
+
+[img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/autotabs_result.png[/img]
+
+But you are not limited to one script. For example, if needed to monitor all command with [b]move.[/b] prefix, the regex pattern will look like [b]\<move\.[^,]+,(?<unique2>[^>]+)\>:[/b]. And all log lines with [b]move.[/b] prefix will be split into separate tabs, per ship object id.
+
+[size=3][u][b]Known Issues[/b][/u][/size]
+
+In some cases, the application may not detect changes in the log file. If this happens, you can enable the "Forced refresh" mode in the menu. This will force the application to check for changes in the log file at regular intervals.
+
+Will work in case if any [b]watch mode[/b] is enabled.
+
+In some cases too many tabs can fill a whole window of a tool. There is limitation of used framework. Let's limit an AutoTabs feature in this case.
+
+[size=3][u][b]Links[/b][/u][/size]
+[list]
+[*] A short demo showcasing the tool features introduced in version 0.2.0: [url=https://youtube.com/watch?v=6cPAfx4gxTA]X4 Log Watcher Demo[/url].
+[*] A short demo showcasing the new features introduced in version 0.3.0: [url=https://youtube.com/watch?v=wRRwymDHv1g]X4 Log Watcher Demo - Version 0.3.0[/url].
+[*] A short demo showcasing the new features introduced in version 0.4.0: [url=https://youtube.com/watch?v=1LO7Upyd3ZM]X4 Log Watcher Demo - Version 0.4.0[/url].
+[*] A short demo showcasing the new features introduced in version 0.6.0: [url=https://youtube.com/watch?v=a77PBN25-jo]X4 Log Watcher Demo - Version 0.6.0[/url].
+[*] There is a topic on the [url=https://forum.egosoft.com/viewtopic.php?t=470624]Egosoft forum[/url], related to this tool.
+[/list]
+[size=3][u][b]Changelog[/b][/u][/size]
+
+[size=3][u][i][0.6.0] - 2025-04-13[/i][/u][/size]
+[list]
+[*] Added:
+[list]
+[*] AutoTabs feature - automatically create tabs based on the appropriate regex pattern from log file content.
+[/list]
+[*] Changed:
+[list]
+[*] Font size of the tabs slightly decreased. To cover the AutoTabs feature.
+[/list]
+[/list]
+[size=3][u][i][0.5.0] - 2025-04-12[/i][/u][/size]
+[list]
+[*] Added:
+[list]
+[*] Option to skip the signature related errors in the log file. By default, it is set to [b]true[/b].
+[*] Option to add "real" timestamp to the filtered content. By default, it is set to [b]false[/b].
+[*] "Bolding" of the tab name, if the tab is not focused and there are new updates in it.
+[/list]
+[*] Changed:
+[list]
+[*] Font size of the tabs slightly decreased.
+[/list]
+[/list]
+[size=3][u][i][0.4.1] - 2025-04-11[/i][/u][/size]
+[list]
+[*] Added:
+[list]
+[*] Notification symbol "🔔" to the tab name, if the tab is not focused and there are new updates in it.
+[*] Show up to 10 lines after the matched line in the log file. Useful for showing the error details in the scripts.
+[*] Support for configurable log file extensions in the application settings.
+[/list]
+[*] Fixed:
+[list]
+[*] "Tab" order of input elements in the filter form.
+[*] Wrong regex is used after editing the filter and Enabling the Tab
+[*] Extra content cleanup after pausing the Tab
+[/list]
+[/list]
+[size=3][u][i][0.3.0] - 2025-04-09[/i][/u][/size]
+[list]
+[*] Added:
+[list]
+[*] Search in current filtered content via Ctrl+F and F3(Enter)/Shift+F3 for next/previous search result.
+[*] Status bar with the current log file name and its stats.
+[*] Loading progress of the log file in offline mode.
+[/list]
+[*] Improved:
+[list]
+[*] Performance - file changes now loaded once then filtered per each tab.
+[/list]
+[/list]
+[size=3][u][i][0.2.0] - 2025-04-08[/i][/u][/size]
+[list]
+[*] Initial public release.
+[/list]
+[size=3][u][b]Contributing[/b][/u][/size]
+
+Contributions are welcome! If you have suggestions for improvements or new features, please open an issue or submit a pull request.
+
+[size=3][u][b]License[/b][/u][/size]
+
+This project is licensed under the Apache License 2.0. See the [url=https://github.com/chemodun/X4LogWatcher/raw/main//LICENSE]LICENSE[/url] file for details.
