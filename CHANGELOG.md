@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.6.0](https://github.com/chemodun/X4LogWatcher/compare/v0.5.0...v0.6.0) (2025-05-13)
+
+
+### Features
+
+* preliminary implement auto tab configuration feature, currently without UI, only logic, for dynamic tab creation ([2cbe2c2](https://github.com/chemodun/X4LogWatcher/commit/2cbe2c2c673bfaa211f4b9c967894524300af77b))
+
+
+### Bug Fixes
+
+* AutoTab cleanup on profile loading ([9357c58](https://github.com/chemodun/X4LogWatcher/commit/9357c58f8b73cf9cebebdb560419ecfa78bf2ce8))
+
+
+### Code Refactoring
+
+* adjust header font sizes for tab control and add tab button ([e467bdc](https://github.com/chemodun/X4LogWatcher/commit/e467bdc18514805781d2a1d3dc27812812bbce88))
+* adjust layout and improve help text in AutoTabConfigDialog ([9357c58](https://github.com/chemodun/X4LogWatcher/commit/9357c58f8b73cf9cebebdb560419ecfa78bf2ce8))
+* remove MenuAutoTabs_Click handler implementation ([fcde9f2](https://github.com/chemodun/X4LogWatcher/commit/fcde9f24828795ed7089487099f0e9c12986c9cb))
+* update tab naming and indicators for auto-created tabs ([dd1287c](https://github.com/chemodun/X4LogWatcher/commit/dd1287cae30a423ac0a81a71a09a76c26fcea053))
+* use named group for unique part of AutTab regex ([20f8422](https://github.com/chemodun/X4LogWatcher/commit/20f842236944f573de0c2f49dfc8064cb7ce7884))
+
+
+### Documentation
+
+* add images for AutoTabs feature and update related documentation ([4ed82a3](https://github.com/chemodun/X4LogWatcher/commit/4ed82a3a4bf69b5c37ecd24250035849851c5868))
+
 ## [0.5.0](https://github.com/chemodun/X4LogWatcher/compare/v0.4.1...v0.5.0) (2025-04-12)
 
 
