@@ -82,7 +82,7 @@ In this case the regex pattern will look like [b]\<move\.idle,(?<unique>[^>]+)\>
 
 [img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/autotabs_menu_item.png[/img]
 
-Program will create tabs for each unique value of the [b]unique[/b] group. The tabs will be named according to the full regex pattern with prefix "🔄 ", so in this case the tab name will be [b]🔄 <move.idle,0x75840>[/b].
+Tool will create tabs for each unique value of the [b]unique[/b] group. The tabs will be named according to the full regex pattern with prefix "🔄 ", so in this case the tab name will be [b]🔄 <move.idle,0x75840>[/b].
 
 [img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/autotabs_result.png[/img]
 
@@ -101,7 +101,7 @@ In some cases too many tabs can fill a whole window of a tool. There is limitati
 [*] A short demo showcasing the tool features introduced in version 0.2.0: [url=https://youtube.com/watch?v=6cPAfx4gxTA]X4 Log Watcher Demo[/url].
 [*] A short demo showcasing the new features introduced in version 0.3.0: [url=https://youtube.com/watch?v=wRRwymDHv1g]X4 Log Watcher Demo - Version 0.3.0[/url].
 [*] A short demo showcasing the new features introduced in version 0.4.0: [url=https://youtube.com/watch?v=1LO7Upyd3ZM]X4 Log Watcher Demo - Version 0.4.0[/url].
-[*] A short demo showcasing the new features introduced in version 0.4.0: [url=https://youtube.com/watch?v=a77PBN25-jo]X4 Log Watcher Demo - Version 0.6.0[/url].
+[*] A short demo showcasing the new features introduced in version 0.6.0: [url=https://youtube.com/watch?v=a77PBN25-jo]X4 Log Watcher Demo - Version 0.6.0[/url].
 [*] There is a topic on the [url=https://forum.egosoft.com/viewtopic.php?t=470624]Egosoft forum[/url], related to this tool.
 [/list]
 [size=3][u][b]Changelog[/b][/u][/size]
