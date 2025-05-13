@@ -161,6 +161,9 @@ namespace X4LogWatcher
     // Replace dictionary with TabInfo collection
     private readonly List<TabInfo> tabs = [];
 
+    // Collection of auto tab configurations
+    private readonly List<AutoTabConfig> autoTabConfigs = [];
+
     // Command to close tabs
     private ICommand? _closeTabCommand;
     public ICommand CloseTabCommand => _closeTabCommand ??= new RelayCommand<string>(CloseTabByPattern);
@@ -440,10 +443,10 @@ namespace X4LogWatcher
     {
       // Create a new tab with default settings
       string defaultRegex = ".*";
-      AddNewTab("", defaultRegex, 0, false);
+      AddNewTab("", defaultRegex, 0, false, false);
     }
 
-    private void AddNewTab(string tabName, string regexPattern, int afterLines, bool isEnabled)
+    private void AddNewTab(string tabName, string regexPattern, int afterLines, bool isEnabled, bool isAutoCreated = false)
     {
       // Create a MetroTabItem with close button
       var tabItem = new MetroTabItem
@@ -493,12 +496,42 @@ namespace X4LogWatcher
       Grid.SetRow(lblName, 0);
       mainGrid.Children.Add(lblName);
 
+      // Add auto-created indicator if applicable
+      if (isAutoCreated)
+      {
+        var autoIndicator = new Border
+        {
+          Background = new SolidColorBrush(Colors.LightBlue),
+          BorderBrush = new SolidColorBrush(Colors.Navy),
+          BorderThickness = new Thickness(1),
+          CornerRadius = new CornerRadius(3),
+          Margin = new Thickness(5, 0, 5, 0),
+          Padding = new Thickness(5, 2, 5, 2),
+          VerticalAlignment = VerticalAlignment.Center,
+          ToolTip = "This tab was automatically created by an auto tab rule",
+        };
+
+        var autoText = new TextBlock
+        {
+          Text = "Auto",
+          FontSize = 10,
+          Foreground = new SolidColorBrush(Colors.Navy),
+        };
+
+        autoIndicator.Child = autoText;
+        Grid.SetColumn(autoIndicator, 2);
+        Grid.SetRow(autoIndicator, 0);
+        Grid.SetZIndex(autoIndicator, 1);
+        mainGrid.Children.Add(autoIndicator);
+      }
+
       // Add the tab name input textbox (fills remaining space)
       var txtName = new TextBox
       {
         Text = tabName,
         VerticalAlignment = VerticalAlignment.Center,
         Margin = new Thickness(5, 0, 5, 0),
+        IsReadOnly = isAutoCreated, // Make it read-only if auto-created
       };
       Grid.SetColumn(txtName, 2);
       Grid.SetColumnSpan(txtName, 4);
@@ -583,7 +616,18 @@ namespace X4LogWatcher
       contentPanel.Child = txtContent;
 
       // Create and store TabInfo object
-      var tabInfo = new TabInfo(tabItem, chkEnable, txtName, txtRegex, numAfterLines, txtContent, regexPattern, afterLines, isEnabled);
+      var tabInfo = new TabInfo(
+        tabItem,
+        chkEnable,
+        txtName,
+        txtRegex,
+        numAfterLines,
+        txtContent,
+        regexPattern,
+        afterLines,
+        isEnabled,
+        isAutoCreated
+      );
       tabs.Add(tabInfo);
 
       // Set up Apply button click handler using the TabInfo object
@@ -686,9 +730,11 @@ namespace X4LogWatcher
 
     private void SaveProfile(string profilePath)
     {
-      var profileData = tabs.Select(tab => new TabProfileItem(tab)).ToList();
+      var profileData = tabs.Where(tab => !tab.IsAutoCreated).Select(tab => new TabProfileItem(tab)).ToList();
 
-      File.WriteAllText(profilePath, System.Text.Json.JsonSerializer.Serialize(profileData));
+      var profile = new TabProfile { Tabs = profileData, AutoTabConfigs = autoTabConfigs.ToList() };
+
+      File.WriteAllText(profilePath, System.Text.Json.JsonSerializer.Serialize(profile));
 
       // Add to recent profiles
       AppConfig.AddRecentProfile(profilePath);
@@ -703,26 +749,67 @@ namespace X4LogWatcher
         return;
       }
 
-      var profileData = System.Text.Json.JsonSerializer.Deserialize<List<TabProfileItem>>(File.ReadAllText(profilePath));
-
-      if (profileData == null)
+      try
       {
-        MessageBox.Show("Failed to load profile data.", "Load Profile", MessageBoxButton.OK, MessageBoxImage.Error);
-        return;
+        // Try to deserialize as the new format first
+        var profile = System.Text.Json.JsonSerializer.Deserialize<TabProfile>(File.ReadAllText(profilePath));
+
+        if (profile != null)
+        {
+          // Remove all tabs except the add button
+          var itemsToRemove = tabControl.Items.Cast<object>().Where(i => i != addTabButton).ToList();
+          foreach (var item in itemsToRemove)
+          {
+            tabControl.Items.Remove(item);
+          }
+          tabs.Clear();
+
+          // Clear and load auto tab configurations
+          autoTabConfigs.Clear();
+          autoTabConfigs.AddRange(profile.AutoTabConfigs);
+
+          // Add tabs from the profile
+          foreach (var item in profile.Tabs)
+          {
+            AddNewTab(item.TabName, item.RegexPattern, item.AfterLines, item.IsEnabled, false);
+          }
+        }
       }
-
-      // Remove all tabs except the add button
-      var itemsToRemove = tabControl.Items.Cast<object>().Where(i => i != addTabButton).ToList();
-      foreach (var item in itemsToRemove)
+      catch (System.Text.Json.JsonException)
       {
-        tabControl.Items.Remove(item);
-      }
-      tabs.Clear();
+        // If deserializing as TabProfile fails, try the old format
+        try
+        {
+          var oldFormatData = System.Text.Json.JsonSerializer.Deserialize<List<TabProfileItem>>(File.ReadAllText(profilePath));
 
-      // Add tabs from the profile
-      foreach (var item in profileData)
-      {
-        AddNewTab(item.TabName, item.RegexPattern, item.AfterLines, item.IsEnabled);
+          if (oldFormatData != null)
+          {
+            // Remove all tabs except the add button
+            var itemsToRemove = tabControl.Items.Cast<object>().Where(i => i != addTabButton).ToList();
+            foreach (var item in itemsToRemove)
+            {
+              tabControl.Items.Remove(item);
+            }
+            tabs.Clear();
+            autoTabConfigs.Clear();
+
+            // Add tabs from the old format profile
+            foreach (var item in oldFormatData)
+            {
+              AddNewTab(item.TabName, item.RegexPattern, item.AfterLines, item.IsEnabled);
+            }
+          }
+          else
+          {
+            MessageBox.Show("Failed to load profile data.", "Load Profile", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+          }
+        }
+        catch (Exception ex)
+        {
+          MessageBox.Show($"Error loading profile: {ex.Message}", "Load Profile", MessageBoxButton.OK, MessageBoxImage.Error);
+          return;
+        }
       }
 
       // Update recent profiles
@@ -998,11 +1085,29 @@ namespace X4LogWatcher
           fileLines.Add((stream.Position, line));
         }
 
+        // Check for auto tabs first, creating new ones as needed
+        var additionalTabs = new ConcurrentBag<TabInfo>();
+
+        // Process each line to check for auto tab matches
+        // This needs to be done sequentially since it might create new tabs
+        foreach (var (position, logLine) in fileLines)
+        {
+          var autoTab = CheckAndCreateAutoTab(logLine);
+          if (autoTab != null && !enabledTabs.Contains(autoTab) && !additionalTabs.Contains(autoTab))
+          {
+            additionalTabs.Add(autoTab);
+          }
+        }
+
+        // Add any newly created tabs to our processing list
+        var allTabsToProcess = new List<TabInfo>(enabledTabs);
+        allTabsToProcess.AddRange(additionalTabs);
+
         // Process each tab in parallel
         var contentByTab = new ConcurrentDictionary<TabInfo, StringBuilder>();
 
         Parallel.ForEach(
-          enabledTabs,
+          allTabsToProcess,
           tab =>
           {
             var contentBuilder = new StringBuilder();
@@ -1058,7 +1163,7 @@ namespace X4LogWatcher
         Dispatcher.Invoke(() =>
         {
           // Process results for each tab
-          foreach (var tab in enabledTabs)
+          foreach (var tab in allTabsToProcess)
           {
             if (contentByTab.TryGetValue(tab, out var contentBuilder))
             {
@@ -1700,6 +1805,55 @@ namespace X4LogWatcher
     private void ClearSearchStatus()
     {
       txtSearchStatus.Text = string.Empty;
+    }
+
+    /// <summary>
+    /// Checks if a line matches any auto tab configuration, and creates a new tab if needed.
+    /// Returns the tab that matches, or null if no auto tabs match.
+    /// </summary>
+    private TabInfo? CheckAndCreateAutoTab(string line)
+    {
+      if (autoTabConfigs.Count == 0)
+        return null;
+
+      foreach (var config in autoTabConfigs)
+      {
+        if (!config.IsEnabled || config.CompiledRegex == null)
+          continue;
+
+        var match = config.CompiledRegex.Match(line);
+        if (match.Success && match.Groups.Count > Math.Max(config.ConstantGroupNumber, config.VariableGroupNumber))
+        {
+          // We have a match - extract the variable value
+          string variableValue = match.Groups[config.VariableGroupNumber].Value;
+
+          if (config.LinkedTabs.IndexOf(variableValue) >= 0)
+          {
+            // We found an existing tab for this auto tab pattern and variable
+            return null;
+          }
+          config.LinkedTabs.Add(variableValue);
+
+          // We need to create a new tab
+          string constantPart = match.Groups[config.ConstantGroupNumber].Value;
+          string tabName = $"Auto: {constantPart} - {variableValue}";
+          string tabRegex = config.GenerateTabRegexPattern(variableValue);
+
+          // Create the new tab
+          TabInfo? newTab = null;
+
+          Dispatcher.Invoke(() =>
+          {
+            AddNewTab(tabName, tabRegex, config.AfterLines, true, true);
+            newTab = tabs.Last(); // Get the tab we just added
+          });
+
+          return newTab;
+        }
+      }
+
+      // No auto tab match found
+      return null;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

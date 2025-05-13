@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace X4LogWatcher
@@ -21,9 +22,8 @@ namespace X4LogWatcher
     public int AfterLines { get; set; }
 
     // Default constructor for JSON deserialization
-    public TabProfileItem() { }
+    public TabProfileItem() { } // Constructor to create from a TabInfo
 
-    // Constructor to create from a TabInfo
     public TabProfileItem(TabInfo tabInfo)
     {
       TabName = tabInfo.TabName;
@@ -31,5 +31,17 @@ namespace X4LogWatcher
       IsEnabled = tabInfo.IsWatchingEnabled;
       AfterLines = tabInfo.AfterLines;
     }
+  }
+
+  /// <summary>
+  /// Class used for serializing and deserializing a complete tab profile including auto tab configurations
+  /// </summary>
+  public class TabProfile
+  {
+    [JsonPropertyName("tabs")]
+    public List<TabProfileItem> Tabs { get; set; } = new List<TabProfileItem>();
+
+    [JsonPropertyName("autoTabConfigs")]
+    public List<AutoTabConfig> AutoTabConfigs { get; set; } = new List<AutoTabConfig>();
   }
 }

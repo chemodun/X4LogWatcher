@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
@@ -35,6 +36,22 @@ namespace X4LogWatcher
       {
         _tabName = value;
         OnPropertyChanged(nameof(TabName));
+      }
+    }
+
+    // Property to indicate if this tab was auto-created by an auto-tab rule
+    private bool _isAutoCreated;
+    public bool IsAutoCreated
+    {
+      get => _isAutoCreated;
+      set
+      {
+        if (_isAutoCreated != value)
+        {
+          _isAutoCreated = value;
+          OnPropertyChanged(nameof(IsAutoCreated));
+          UpdateTabHeader();
+        }
       }
     }
 
@@ -126,7 +143,8 @@ namespace X4LogWatcher
       TextBox contentTextBox,
       string pattern,
       int afterLines,
-      bool enabled
+      bool enabled,
+      bool isAutoCreated = false
     )
     {
       TabItem = tabItem;
@@ -143,6 +161,7 @@ namespace X4LogWatcher
       HasNewContent = false;
       AfterLines = afterLines;
       AfterLinesCurrent = 0;
+      IsAutoCreated = isAutoCreated;
 
       // Wire up events
       RegexTextBox.TextChanged += RegexTextBox_TextChanged;
@@ -219,6 +238,17 @@ namespace X4LogWatcher
       else
       {
         HeaderedControlHelper.SetHeaderFontWeight(TabItem, FontWeights.Normal);
+      }
+
+      // Add an indicator for auto-created tabs
+      if (IsAutoCreated)
+      {
+        displayText = "🔄 " + displayText; // Recycling symbol to indicate auto-created tab
+        TabItem.Foreground = Brushes.Navy; // Different color for auto tabs
+      }
+      else
+      {
+        TabItem.Foreground = Brushes.Black; // Default color for normal tabs
       }
 
       TabItem.Header = displayText;
