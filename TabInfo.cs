@@ -227,17 +227,6 @@ namespace X4LogWatcher
         displayText = RegexPattern;
       }
 
-      // Add a prominent indicator for new content
-      if (HasNewContent)
-      {
-        displayText = "🔔 " + displayText; // Warning symbol to indicate attention needed
-        HeaderedControlHelper.SetHeaderFontWeight(TabItem, FontWeights.Bold);
-      }
-      else
-      {
-        HeaderedControlHelper.SetHeaderFontWeight(TabItem, FontWeights.Normal);
-      }
-
       // Add an indicator for auto-created tabs
       if (IsAutoCreated)
       {
@@ -247,6 +236,17 @@ namespace X4LogWatcher
       else
       {
         TabItem.Foreground = Brushes.Black; // Default color for normal tabs
+      }
+
+      // Add a prominent indicator for new content
+      if (HasNewContent)
+      {
+        displayText = "🔔 " + displayText; // Warning symbol to indicate attention needed
+        HeaderedControlHelper.SetHeaderFontWeight(TabItem, FontWeights.Bold);
+      }
+      else
+      {
+        HeaderedControlHelper.SetHeaderFontWeight(TabItem, FontWeights.Normal);
       }
 
       TabItem.Header = displayText;

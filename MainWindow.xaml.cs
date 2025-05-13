@@ -1809,7 +1809,7 @@ namespace X4LogWatcher
           config.LinkedTabsIds.Add(uniqueValue);
 
           // We need to create a new tab
-          string tabName = $"Auto: {match.Value}";
+          string tabName = match.Value;
           string tabRegex = config.GenerateTabRegexPattern(uniqueValue);
 
           // Create the new tab
