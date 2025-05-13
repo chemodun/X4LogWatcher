@@ -48,24 +48,24 @@ jobs:
           for file_changed in ${CHANGED_FILES}; do
             for conversion_type in egosoft nexus; do
               echo "Converting $file_changed to $conversion_type"
-              python3 markdown-to-bbcode-simple/markdown_to_bbcode.py -t $conversion_type -o "Docs" "$file_changed"
+              python3 markdown-to-bbcode-simple/markdown_to_bbcode.py -t $conversion_type -o "docs" "$file_changed"
               if [[ $? -ne 0 ]]; then
                 echo "Error converting $file_changed to $conversion_type" >&2
               else
                 echo "Converted $file_changed to $conversion_type"
                 file_converted="${file_changed%.md}.$conversion_type"
-                git add "Docs/$file_converted"
+                git add "docs/$file_converted"
                 if [[ $? -ne 0 ]]; then
-                  echo "Error adding Docs/$file_converted to git" >&2
+                  echo "Error adding docs/$file_converted to git" >&2
                 else
-                  echo "Added Docs/$file_converted to git"
+                  echo "Added docs/$file_converted to git"
                 fi
               fi
             done
           done
           for file_deleted in ${DELETED_FILES}; do
             for conversion_type in egosoft nexus; do
-              file_to_delete="Docs/${file_deleted%.md}.$conversion_type"
+              file_to_delete="docs/${file_deleted%.md}.$conversion_type"
               if [[ -f "$file_to_delete" ]]; then
                 echo "Deleting $file_to_delete"
                 git rm "$file_to_delete"
