@@ -62,20 +62,57 @@ To use X4 Log Watcher, follow these steps:
 ![Common errors parsing](docs/images/common_errors_parsing.png)
 ![Exact ship monitoring](docs/images/exact_ship_monitoring.png)
 
+## AutoTabs feature
+
+From version 0.6.0 onwards, the application supports the AutoTabs feature. This feature allows you to automatically create tabs based on the log file content. The application will analyze the log file and create tabs for each unique entry, making it easier to monitor multiple entries simultaneously.
+
+The key point of it - the regular expression pattern with mandatory named group `unique`. The tool will check the log lines against this pattern and create tabs for each unique match.
+
+Let's assume we need an AutoTabs for the `move.idle` script.
+Log line looks like this:
+
+```log
+[Scripts] 1689391.54 *** aicontext<move.idle,0x75840>: about to finish idle. moving to anchor position.
+```
+
+In this case the regex pattern will look like `\<move\.idle,(?<unique>[^>]+)\>:`.
+![AutoTabs menu with no items](docs/images/autotabs_menu_empty.png)
+
+![Edit pattern for AutoTabs](docs/images/autotabs_edit_pattern.png)
+
+![AutoTabs items submenu](docs/images/autotabs_menu_item.png)
+
+Program will create tabs for each unique value of the `unique` group. The tabs will be named according to the full regex pattern with prefix "🔄 ", so in this case the tab name will be `🔄 <move.idle,0x75840>`.
+
+![Result of applying the AutoTabs](docs/images/autotabs_result.png)
+
+But you are not limited to one script. For example, if needed to monitor all command with `move.` prefix, the regex pattern will look like `\<move\.[^,]+,(?<unique2>[^>]+)\>:`. And all log lines with `move.` prefix will be split into separate tabs, per ship object id.
+
 ## Known Issues
 
 In some cases, the application may not detect changes in the log file. If this happens, you can enable the "Forced refresh" mode in the menu. This will force the application to check for changes in the log file at regular intervals.
 
 Will work in case if any `watch mode` is enabled.
 
+In some cases too many tabs can fill a whole window of a tool. There is limitation of used framework. Let's limit an AutoTabs feature in this case.
+
 ## Links
 
 - A short demo showcasing the tool features introduced in version 0.2.0: [X4 Log Watcher Demo](https://youtube.com/watch?v=6cPAfx4gxTA).
 - A short demo showcasing the new features introduced in version 0.3.0: [X4 Log Watcher Demo - Version 0.3.0](https://youtube.com/watch?v=wRRwymDHv1g).
 - A short demo showcasing the new features introduced in version 0.4.0: [X4 Log Watcher Demo - Version 0.4.0](https://youtube.com/watch?v=1LO7Upyd3ZM).
+- A short demo showcasing the new features introduced in version 0.4.0: [X4 Log Watcher Demo - Version 0.6.0](https://youtube.com/watch?v=a77PBN25-jo).
 - There is a topic on the [Egosoft forum](https://forum.egosoft.com/viewtopic.php?t=470624), related to this tool.
 
 ## Changelog
+
+### [0.6.0] - 2025-04-13
+
+- Added:
+  - AutoTabs feature - automatically create tabs based on the appropriate regex pattern from log file content.
+
+- Changed:
+  - Font size of the tabs slightly decreased. To cover the AutoTabs feature.
 
 ### [0.5.0] - 2025-04-12
 
