@@ -101,14 +101,14 @@
         <!-- Tab Control with special Add Tab button -->
         <Controls:MetroAnimatedTabControl x:Name="tabControl"
                                           Margin="5"
-                                          Controls:HeaderedControlHelper.HeaderFontSize="18">
+                                          Controls:HeaderedControlHelper.HeaderFontSize="16">
             <!-- Special Add Tab button that will always be shown as the last tab -->
             <Controls:MetroTabItem x:Name="addTabButton"
                                    Header="+"
                                    Width="40"
                                    MouseLeftButtonUp="AddTabButton_MouseLeftButtonUp"
                                    CloseButtonEnabled="False"
-                                   Controls:HeaderedControlHelper.HeaderFontSize="24"
+                                   Controls:HeaderedControlHelper.HeaderFontSize="18"
                                    Controls:HeaderedControlHelper.HeaderFontWeight="Bold">
                 <!-- Explicitly set content to empty -->
                 <Grid></Grid>
