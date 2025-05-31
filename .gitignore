@@ -55,3 +55,29 @@ nunit-*.xml
 
 # Local
 dist
+
+# VS Code Performance Optimization - Exclude WPF temporary files
+*_wpftmp*
+**/*_wpftmp*
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Additional VS Code optimization exclusions
+.vscode/.ropeproject
+.ionide/
+
+# NuGet packages and package restore
+packages/
+**/packages/**
+!packages/build/
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# MSBuild temporary files that cause VS Code freezing
+*.binlog
+*.tmp_proj

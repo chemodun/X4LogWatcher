@@ -1,0 +1,121 @@
+{
+    "folders": [
+        {
+            "name": "X4 LogWatcher",
+            "path": "."
+        }
+    ],
+    "settings": {
+        // Performance optimizations specific to this workspace
+        "files.watcherExclude": {
+            "**/obj/**": true,
+            "**/bin/**": true,
+            "**/.git/objects/**": true,
+            "**/.git/subtree-cache/**": true,
+            "**/node_modules/**": true,
+            "**/*_wpftmp*": true,
+            "**/temp/**": true,
+            "**/tmp/**": true,
+            "**/packages/**": true,
+            "**/.nuget/**": true,
+            "**/TestResults/**": true
+        },
+        
+        "search.exclude": {
+            "**/obj/**": true,
+            "**/bin/**": true,
+            "**/.git/**": true,
+            "**/node_modules/**": true,
+            "**/*_wpftmp*": true,
+            "**/temp/**": true,
+            "**/tmp/**": true,
+            "**/packages/**": true,
+            "**/.nuget/**": true,
+            "**/TestResults/**": true
+        },
+        
+        // Limit what VS Code indexes and watches
+        "typescript.preferences.includePackageJsonAutoImports": "off",
+        "extensions.autoUpdate": false,
+        
+        // Memory management
+        "omnisharp.maxProjectResults": 100,
+        "omnisharp.maxFindSymbolsItems": 100,
+        
+        // Disable resource-intensive features
+        "workbench.enableExperiments": false,
+        "telemetry.telemetryLevel": "off",
+        "workbench.settings.enableNaturalLanguageSearch": false,
+        
+        // C# specific optimizations
+        "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": false,
+        "omnisharp.enableRoslynAnalyzers": true,
+        "omnisharp.enableEditorConfigSupport": true,
+        "omnisharp.enableAsyncCompletion": true,
+        
+        // File associations and exclusions
+        "files.associations": {
+            "*.xaml": "xml"
+        },
+        
+        // Limit auto-save and formatting to reduce I/O
+        "files.autoSave": "onFocusChange",
+        "editor.formatOnSave": false,
+        "[csharp]": {
+            "editor.formatOnSave": true,
+            "editor.defaultFormatter": "csharpier.csharpier-vscode"
+        }
+    },
+    "extensions": {
+        "recommendations": [
+            "ms-dotnettools.csharp",
+            "ms-dotnettools.vscode-dotnet-runtime",
+            "csharpier.csharpier-vscode"
+        ],
+        "unwantedRecommendations": [
+            "ms-vscode.vscode-typescript-next"
+        ]
+    },
+    "tasks": {
+        "version": "2.0.0",
+        "tasks": [
+            {
+                "label": "build",
+                "command": "dotnet",
+                "type": "process",
+                "args": [
+                    "build",
+                    "${workspaceFolder}/X4LogWatcher.csproj"
+                ],
+                "group": {
+                    "kind": "build",
+                    "isDefault": true
+                },
+                "problemMatcher": "$msCompile"
+            },
+            {
+                "label": "clean-temp-files",
+                "type": "shell",
+                "command": "Get-ChildItem -Path obj -Recurse -Filter '*_wpftmp*' | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue; Write-Host 'Temporary files cleaned!' -ForegroundColor Green",
+                "group": "build",
+                "presentation": {
+                    "echo": true,
+                    "reveal": "always",
+                    "focus": false,
+                    "panel": "shared"
+                },
+                "options": {
+                    "cwd": "${workspaceFolder}"
+                }
+            },
+            {
+                "label": "clean-and-build",
+                "dependsOrder": "sequence",
+                "dependsOn": [
+                    "clean-temp-files",
+                    "build"
+                ]
+            }
+        ]
+    }
+}

@@ -4,9 +4,57 @@
     "csharp.format.enable": true,
     "dotnet.preferCSharpExtension": true,
     "editor.formatOnSave": false,
+    
     // Enable per-language
     "[csharp]": {
-	"editor.formatOnSave": true,
-	"editor.defaultFormatter": "csharpier.csharpier-vscode"
-    }
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "csharpier.csharpier-vscode"
+    },
+    
+    // Performance optimizations to prevent VS Code freezing
+    "files.watcherExclude": {
+        "**/obj/**": true,
+        "**/bin/**": true,
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/**": true,
+        "**/*_wpftmp*": true,
+        "**/temp/**": true,
+        "**/tmp/**": true
+    },
+    
+    "search.exclude": {
+        "**/obj/**": true,
+        "**/bin/**": true,
+        "**/.git/**": true,
+        "**/node_modules/**": true,
+        "**/*_wpftmp*": true,
+        "**/temp/**": true,
+        "**/tmp/**": true
+    },
+    
+    "files.exclude": {
+        "**/obj/Debug/**": true,
+        "**/obj/Release/**": true,
+        "**/bin/Debug/**": true,
+        "**/bin/Release/**": true,
+        "**/*_wpftmp*": true
+    },
+    
+    // Limit file watching and indexing
+    "typescript.preferences.includePackageJsonAutoImports": "off",
+    "files.watcherInclude": ["**/*.cs", "**/*.csproj", "**/*.sln", "**/*.xaml"],
+    "omnisharp.enableRoslynAnalyzers": true,
+    "omnisharp.enableEditorConfigSupport": true,
+    "omnisharp.enableAsyncCompletion": true,
+    
+    // Memory and performance settings
+    "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": false,
+    "omnisharp.maxProjectResults": 250,
+    "extensions.autoUpdate": false,
+    
+    // Disable features that might cause performance issues
+    "telemetry.telemetryLevel": "off",
+    "workbench.enableExperiments": false,
+    "workbench.settings.enableNaturalLanguageSearch": false
 }
