@@ -22,7 +22,7 @@ dotnet_separate_import_directive_groups = false
 # Configurable behaviors
 # end_of_line = lf - there is no 'auto' with an .editorconfig
 indent_style = space
-indent_size = 4
+indent_size = 2
 max_line_length = 140
 
 # C# specific formatting (optimized for performance)
