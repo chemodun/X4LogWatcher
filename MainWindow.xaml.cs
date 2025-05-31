@@ -219,6 +219,9 @@ namespace X4LogWatcher
       // Add handler for tab selection changed to clear new content indicator
       tabControl.SelectionChanged += TabControl_SelectionChanged;
 
+      // Add handler for window closing to clean up resources
+      this.Closing += MainWindow_Closing;
+
       // Automatically load the active profile if one exists
       if (!string.IsNullOrEmpty(AppConfig.ActiveProfile) && File.Exists(AppConfig.ActiveProfile))
       {
@@ -1834,6 +1837,53 @@ namespace X4LogWatcher
     protected void OnPropertyChanged(string propertyName)
     {
       PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+      // Clean up file and folder watchers
+      if (fileWatcher != null)
+      {
+        try
+        {
+          fileWatcher.Changed -= OnSingleFileChanged;
+          fileWatcher.Dispose();
+          fileWatcher = null;
+        }
+        catch (Exception ex)
+        {
+          Debug.WriteLine($"Error disposing fileWatcher: {ex.Message}");
+        }
+      }
+
+      if (folderWatcher != null)
+      {
+        try
+        {
+          folderWatcher.Changed -= OnFolderFileChanged;
+          folderWatcher.Created -= OnFolderFileCreated;
+          folderWatcher.Error -= OnFolderWatcherError;
+          folderWatcher.Dispose();
+          folderWatcher = null;
+        }
+        catch (Exception ex)
+        {
+          Debug.WriteLine($"Error disposing folderWatcher: {ex.Message}");
+        }
+      }
+
+      // Stop forced refresh timer if it's running
+      StopForcedRefresh();
+
+      // Save current application configuration
+      try
+      {
+        Config.SaveConfig(AppConfig);
+      }
+      catch (Exception ex)
+      {
+        Debug.WriteLine($"Error saving configuration: {ex.Message}");
+      }
     }
   }
 }
