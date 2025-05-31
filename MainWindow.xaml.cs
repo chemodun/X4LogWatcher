@@ -672,6 +672,9 @@ namespace X4LogWatcher
       // Remove it from our collection
       tabs.Remove(tabInfo);
 
+      // Properly dispose of the TabInfo to clean up memory and event handlers
+      tabInfo.Dispose();
+
       // If there are no more tabs, consider adding a default one
       if (tabs.Count == 0 && _currentLogFile != null)
       {
@@ -725,6 +728,12 @@ namespace X4LogWatcher
           {
             tabControl.Items.Remove(item);
           }
+
+          // Dispose all existing tabs before clearing
+          foreach (var tab in tabs)
+          {
+            tab.Dispose();
+          }
           tabs.Clear();
 
           // Clear and load auto tab configurations
@@ -757,6 +766,12 @@ namespace X4LogWatcher
             foreach (var item in itemsToRemove)
             {
               tabControl.Items.Remove(item);
+            }
+
+            // Dispose all existing tabs before clearing
+            foreach (var tab in tabs)
+            {
+              tab.Dispose();
             }
             tabs.Clear();
             autoTabConfigs.Clear();
@@ -1874,6 +1889,20 @@ namespace X4LogWatcher
 
       // Stop forced refresh timer if it's running
       StopForcedRefresh();
+
+      // Dispose all tabs to clean up memory and event handlers
+      foreach (var tab in tabs)
+      {
+        try
+        {
+          tab.Dispose();
+        }
+        catch (Exception ex)
+        {
+          Debug.WriteLine($"Error disposing tab: {ex.Message}");
+        }
+      }
+      tabs.Clear();
 
       // Save current application configuration
       try

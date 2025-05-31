@@ -13,9 +13,11 @@ namespace X4LogWatcher
   /// <summary>
   /// Class to hold all information related to a tab in the log watcher
   /// </summary>
-  public class TabInfo : INotifyPropertyChanged
+  public class TabInfo : INotifyPropertyChanged, IDisposable
   {
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    private bool _disposed = false;
 
     private string _regexPattern = string.Empty;
     public string RegexPattern
@@ -301,6 +303,9 @@ namespace X4LogWatcher
     /// </summary>
     public void AppendContent(string text)
     {
+      if (_disposed)
+        return;
+
       ContentTextBox.AppendText(text);
       ContentTextBox.ScrollToEnd();
     }
@@ -310,6 +315,9 @@ namespace X4LogWatcher
     /// </summary>
     public void ClearContent()
     {
+      if (_disposed)
+        return;
+
       ContentTextBox.Clear();
     }
 
@@ -330,5 +338,76 @@ namespace X4LogWatcher
       // Just update the tab header text which includes the indicator when HasNewContent is true
       UpdateTabHeader();
     }
+
+    #region IDisposable Implementation
+
+    /// <summary>
+    /// Dispose of resources and unsubscribe from event handlers
+    /// </summary>
+    public void Dispose()
+    {
+      Dispose(true);
+      GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Protected dispose method
+    /// </summary>
+    /// <param name="disposing">True if disposing from Dispose() method, false if from finalizer</param>
+    protected virtual void Dispose(bool disposing)
+    {
+      if (!_disposed && disposing)
+      {
+        try
+        {
+          // Unsubscribe from all event handlers to prevent memory leaks
+          if (RegexTextBox != null)
+          {
+            RegexTextBox.TextChanged -= RegexTextBox_TextChanged;
+          }
+
+          if (NameTextBox != null)
+          {
+            NameTextBox.TextChanged -= NameTextBox_TextChanged;
+          }
+
+          if (AfterLinesNumericUpDown != null)
+          {
+            AfterLinesNumericUpDown.ValueChanged -= AfterLinesNumericUpDown_ValueChanged;
+          }
+
+          if (WatchingCheckBox != null)
+          {
+            WatchingCheckBox.Unchecked -= WatchingCheckBox_Unchecked;
+          }
+
+          // Clear property change event handlers
+          PropertyChanged = null;
+
+          // Force garbage collection of large content if present
+          if (ContentTextBox != null && ContentTextBox.Text.Length > 10_000_000) // 10MB threshold
+          {
+            ContentTextBox.Clear();
+          }
+        }
+        catch (Exception ex)
+        {
+          // Log but don't throw during disposal
+          System.Diagnostics.Debug.WriteLine($"Error during TabInfo disposal: {ex.Message}");
+        }
+
+        _disposed = true;
+      }
+    }
+
+    /// <summary>
+    /// Finalizer to ensure disposal if Dispose() wasn't called
+    /// </summary>
+    ~TabInfo()
+    {
+      Dispose(false);
+    }
+
+    #endregion
   }
 }
