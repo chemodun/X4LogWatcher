@@ -190,6 +190,9 @@ namespace X4LogWatcher
 
       // Initialize tab header
       UpdateTabHeader();
+
+      // Set up scroll detection for smart auto-scrolling
+      SetupScrollDetection();
     }
 
     protected void OnPropertyChanged(string propertyName)
@@ -319,8 +322,26 @@ namespace X4LogWatcher
       if (_disposed)
         return;
 
+      // Check if user was at the bottom before adding content
+      bool wasAtBottom = IsUserAtBottom();
+      bool isTabFocused = IsTabCurrentlyFocused();
+
       ContentTextBox.AppendText(text);
-      ContentTextBox.ScrollToEnd();
+
+      // Only auto-scroll if user was already at the bottom or this tab is not currently focused
+      if (wasAtBottom || !isTabFocused)
+      {
+        ContentTextBox.ScrollToEnd();
+      }
+      else
+      {
+        // User is scrolled up and tab is focused - indicate new content arrived
+        // This will make the tab header show the "new content" indicator
+        if (!HasNewContent)
+        {
+          SetHasNewContent(true);
+        }
+      }
 
       // Check if we need to optimize memory after adding content
       OptimizeMemoryIfNeeded();
@@ -451,6 +472,150 @@ namespace X4LogWatcher
       }
     }
 
+    /// <summary>
+    /// Checks if the user is currently scrolled to the bottom of the TextBox
+    /// </summary>
+    /// <returns>True if at bottom, false if scrolled up</returns>
+    private bool IsUserAtBottom()
+    {
+      if (_disposed || ContentTextBox == null)
+        return true; // Default to true to maintain existing behavior
+
+      try
+      {
+        // Find the ScrollViewer inside the TextBox
+        var scrollViewer = FindScrollViewer(ContentTextBox);
+        if (scrollViewer != null)
+        {
+          var verticalOffset = scrollViewer.VerticalOffset;
+          var scrollableHeight = scrollViewer.ScrollableHeight;
+
+          // Consider "at bottom" if within a small tolerance (a few pixels)
+          const double tolerance = 5.0;
+          return Math.Abs(verticalOffset - scrollableHeight) <= tolerance;
+        }
+
+        // Fallback: check if caret is at the end
+        return ContentTextBox.CaretIndex == ContentTextBox.Text.Length;
+      }
+      catch
+      {
+        return true; // Default to true if we can't determine scroll position
+      }
+    }
+
+    /// <summary>
+    /// Finds the ScrollViewer inside a control using visual tree walking
+    /// </summary>
+    private ScrollViewer? FindScrollViewer(DependencyObject parent)
+    {
+      if (parent == null)
+        return null;
+
+      try
+      {
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+          var child = VisualTreeHelper.GetChild(parent, i);
+
+          if (child is ScrollViewer scrollViewer)
+            return scrollViewer;
+
+          var result = FindScrollViewer(child);
+          if (result != null)
+            return result;
+        }
+      }
+      catch
+      {
+        // Ignore visual tree access errors
+      }
+
+      return null;
+    }
+
+    /// <summary>
+    /// Checks if this tab is currently focused/selected
+    /// </summary>
+    /// <returns>True if this tab is currently active</returns>
+    private bool IsTabCurrentlyFocused()
+    {
+      if (_disposed || TabItem?.Parent == null)
+        return false;
+
+      try
+      {
+        // Check if this tab is the selected item in its parent TabControl
+        if (TabItem.Parent is TabControl tabControl)
+        {
+          return tabControl.SelectedItem == TabItem;
+        }
+
+        // Check if this tab has keyboard focus
+        return TabItem.IsKeyboardFocused || ContentTextBox?.IsKeyboardFocused == true;
+      }
+      catch
+      {
+        return false;
+      }
+    }
+
+    /// <summary>
+    /// Call this method when the user scrolls back to the bottom to clear the new content indicator
+    /// </summary>
+    public void OnUserScrolledToBottom()
+    {
+      if (HasNewContent)
+      {
+        SetHasNewContent(false);
+      }
+    }
+
+    /// <summary>
+    /// Subscribe to TextBox scroll events to detect when user scrolls back to bottom
+    /// This should be called from MainWindow to wire up the scroll detection
+    /// </summary>
+    public void SetupScrollDetection()
+    {
+      if (_disposed || ContentTextBox == null)
+        return;
+
+      try
+      {
+        var scrollViewer = FindScrollViewer(ContentTextBox);
+        if (scrollViewer != null)
+        {
+          scrollViewer.ScrollChanged += OnScrollChanged;
+        }
+      }
+      catch (Exception ex)
+      {
+        System.Diagnostics.Debug.WriteLine($"Error setting up scroll detection for tab '{TabName}': {ex.Message}");
+      }
+    }
+
+    /// <summary>
+    /// Handle scroll events to detect when user returns to bottom
+    /// </summary>
+    private void OnScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+      if (_disposed)
+        return;
+
+      try
+      {
+        // If user scrolled to bottom and we have new content indicator, clear it
+        if (HasNewContent && IsUserAtBottom())
+        {
+          SetHasNewContent(false);
+        }
+      }
+      catch (Exception ex)
+      {
+        System.Diagnostics.Debug.WriteLine($"Error in scroll change handler for tab '{TabName}': {ex.Message}");
+      }
+    }
+
     #region IDisposable Implementation
 
     /// <summary>
@@ -495,6 +660,20 @@ namespace X4LogWatcher
 
           // Clear property change event handlers
           PropertyChanged = null;
+
+          // Unsubscribe from scroll events
+          try
+          {
+            var scrollViewer = FindScrollViewer(ContentTextBox);
+            if (scrollViewer != null)
+            {
+              scrollViewer.ScrollChanged -= OnScrollChanged;
+            }
+          }
+          catch
+          {
+            // Ignore errors during disposal
+          }
 
           // Force garbage collection of large content if present
           if (ContentTextBox != null && ContentTextBox.Text.Length > 10_000_000) // 10MB threshold
