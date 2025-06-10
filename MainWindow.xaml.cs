@@ -643,7 +643,12 @@ namespace X4LogWatcher
       // Add the tab to the tab control BEFORE the "+" tab
       int addButtonIndex = tabControl.Items.IndexOf(addTabButton);
       tabControl.Items.Insert(addButtonIndex, tabItem);
-      tabControl.SelectedItem = tabItem;
+
+      // Only select the new tab if it's not auto-created to avoid shifting focus
+      if (!isAutoCreated)
+      {
+        tabControl.SelectedItem = tabItem;
+      }
     }
 
     private void ContentBox_KeyDown(object sender, KeyEventArgs e)
