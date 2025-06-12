@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.7.1](https://github.com/chemodun/X4LogWatcher/compare/v0.7.0...v0.7.1) (2025-06-12)
+
+
+### Code Refactoring
+
+* extract file change processing into a separate method and apply it on the both modes: "usual" and forced ([554da56](https://github.com/chemodun/X4LogWatcher/commit/554da56ea4a81dc0ccd3e794560751fb4b2f91d1))
+* remove default initialization for boolean fields and improve config serialization ([6be9770](https://github.com/chemodun/X4LogWatcher/commit/6be97701f22d76127f82b004a07e10e3761c0b4a))
+* remove default initialization for boolean fields in MainWindow ([3175ee8](https://github.com/chemodun/X4LogWatcher/commit/3175ee8af7e79ab552b7ea218ebcb05ed249d985))
+* unify log file processing for standard and forced refresh modes ([f24e8d8](https://github.com/chemodun/X4LogWatcher/commit/f24e8d82e9c3e0d62e50d568c04c8793fc8cb202))
+
+
+### Documentation
+
+* **bbcode:** Update bbcode files ([a64cd80](https://github.com/chemodun/X4LogWatcher/commit/a64cd805537348ccdb4367a8b303cc4512ffda49))
+* **bbcode:** Update bbcode files ([8b98ead](https://github.com/chemodun/X4LogWatcher/commit/8b98ead5d7672a29fb7c95377ef7bddde0dc1441))
+* **bbcode:** Update bbcode files ([fdb7578](https://github.com/chemodun/X4LogWatcher/commit/fdb75789a3f4ae669e59b447176ec07d203e4809))
+* fix wording in changelog for version 0.7.0 ([ed7194d](https://github.com/chemodun/X4LogWatcher/commit/ed7194d9172a8c21565497dfb1ec80cc6a5f56e5))
+* update changelog for version 0.7.0 with fixes for memory leaks and focus issues ([f1c496d](https://github.com/chemodun/X4LogWatcher/commit/f1c496dab5f1edc9be5bb5a0c4ce1e6814061271))
+* update changelog for version 0.7.0 with memory leak fix and attribution ([fd0be13](https://github.com/chemodun/X4LogWatcher/commit/fd0be13d4d1c2f8c4d132524fddafbd7b9b9c0ab))
+
 ## [0.7.0](https://github.com/chemodun/X4LogWatcher/compare/v0.6.0...v0.7.0) (2025-06-12)
 
 
