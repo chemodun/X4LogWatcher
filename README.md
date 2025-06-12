@@ -106,6 +106,13 @@ In some cases too many tabs can fill a whole window of a tool. There is limitati
 
 ## Changelog
 
+### [0.7.0] - 2025-06-12
+
+- Fixed:
+  - Possible memory leaks
+  - Focus shift on newly created AutoTab
+  - On update a tab the position is always set to the end of the content
+
 ### [0.6.0] - 2025-04-13
 
 - Added:
