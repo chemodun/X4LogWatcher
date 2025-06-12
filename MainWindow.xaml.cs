@@ -24,7 +24,7 @@ namespace X4LogWatcher
     private FileSystemWatcher? fileWatcher;
     private FileSystemWatcher? folderWatcher;
 
-    private bool _isWatchingFile = false;
+    private bool _isWatchingFile;
     public bool IsWatchingFile
     {
       get => _isWatchingFile;
@@ -42,7 +42,7 @@ namespace X4LogWatcher
         UpdateForcedRefreshEnabledState();
       }
     }
-    private bool _isWatchingFolder = false;
+    private bool _isWatchingFolder;
     public bool IsWatchingFolder
     {
       get => _isWatchingFolder;
@@ -61,7 +61,7 @@ namespace X4LogWatcher
       }
     }
 
-    private bool _isForcedRefreshEnabled = false;
+    private bool _isForcedRefreshEnabled;
     public bool IsForcedRefreshEnabled
     {
       get => _isForcedRefreshEnabled;
@@ -186,9 +186,9 @@ namespace X4LogWatcher
     // Search functionality
     private int currentSearchPosition = -1;
     private readonly List<int> searchResultPositions = [];
-    private TabInfo? currentSearchTab = null;
+    private TabInfo? currentSearchTab;
 
-    private bool _isProcessing = false;
+    private bool _isProcessing;
 
     public MainWindow()
     {
@@ -703,7 +703,7 @@ namespace X4LogWatcher
     {
       var profileData = tabs.Where(tab => !tab.IsAutoCreated).Select(tab => new TabProfileItem(tab)).ToList();
 
-      var profile = new TabProfile { Tabs = profileData, AutoTabConfigs = autoTabConfigs.ToList() };
+      var profile = new TabProfile { Tabs = profileData, AutoTabConfigs = [.. autoTabConfigs] };
 
       File.WriteAllText(profilePath, System.Text.Json.JsonSerializer.Serialize(profile));
 
