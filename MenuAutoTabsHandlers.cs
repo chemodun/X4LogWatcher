@@ -23,13 +23,12 @@ namespace X4LogWatcher
       {
         // Add the configs to the menu
         foreach (var config in autoTabConfigs)
-        {
-          // Create a display name that includes regex pattern details
+        { // Create a display name that includes regex pattern details
           string configName = config.PatternRegex;
 
           if (configName.Length > 80)
           {
-            configName = configName.Substring(0, 77) + "...";
+            configName = string.Concat(configName.AsSpan(0, 77), "...");
           }
 
           var configMenuItem = new MenuItem { Header = configName, Tag = config };

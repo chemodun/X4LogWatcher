@@ -17,7 +17,7 @@ namespace X4LogWatcher
   {
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    private bool _disposed = false;
+    private bool _disposed;
 
     private string _regexPattern = string.Empty;
     public string RegexPattern
@@ -416,7 +416,7 @@ namespace X4LogWatcher
     /// <summary>
     /// Finds the ScrollViewer inside a control using visual tree walking
     /// </summary>
-    private ScrollViewer? FindScrollViewer(DependencyObject parent)
+    private static ScrollViewer? FindScrollViewer(DependencyObject parent)
     {
       if (parent == null)
         return null;

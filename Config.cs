@@ -12,7 +12,7 @@ namespace X4LogWatcher
   public class Config : INotifyPropertyChanged
   {
     private static readonly int MaxRecentProfiles = 5;
-    private bool _isSaving = false; // Flag to prevent recursive saves
+    private bool _isSaving; // Flag to prevent recursive saves
 
     // Backing fields for properties
     private ObservableCollection<string> _recentProfiles = new ObservableCollection<string>();
@@ -20,7 +20,8 @@ namespace X4LogWatcher
     private string? _lastLogFolderPath;
     private string _logFileExtension = ".log";
     private bool _skipSignatureErrors = true;
-    private bool _realTimeStamping = false;
+    private bool _realTimeStamping;
+    private JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions { WriteIndented = true };
 
     // Properties with notification
     public ObservableCollection<string> RecentProfiles
@@ -88,7 +89,7 @@ namespace X4LogWatcher
         };
 
         // Serialize the config to JSON and write to file
-        string jsonConfig = JsonSerializer.Serialize(configToSave, new JsonSerializerOptions { WriteIndented = true });
+        string jsonConfig = JsonSerializer.Serialize(configToSave, config._jsonSerializerOptions);
         File.WriteAllText(configPath, jsonConfig);
       }
       catch (Exception ex)
@@ -156,11 +157,8 @@ namespace X4LogWatcher
 
       try
       {
-        // Remove the profile if it already exists
-        if (RecentProfiles.Contains(profilePath))
-        {
-          RecentProfiles.Remove(profilePath);
-        }
+        // Remove the profile if it already exists (Remove returns true if found and removed)
+        RecentProfiles.Remove(profilePath);
 
         // Add the profile to the beginning of the list
         RecentProfiles.Insert(0, profilePath);
