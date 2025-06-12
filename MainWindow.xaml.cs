@@ -972,19 +972,25 @@ namespace X4LogWatcher
           // Update the file status in the status bar
           UpdateFileStatus();
 
-          // Process all enabled tabs in parallel for better performance
-          ProcessAllEnabledTabsParallel();
-
-          // Mark files as changed for disabled tabs
-          foreach (var tab in tabs.Where(t => !t.IsWatchingEnabled))
-          {
-            if (tab.TabItem.IsSelected == false)
-            {
-              // Set the file changed flag for disabled non active tabs
-              tab.FileChangedFlag = true;
-            }
-          }
+          // Process changes in the file
+          ProcessChanges();
         });
+      }
+    }
+
+    private void ProcessChanges()
+    {
+      // Process all enabled tabs in parallel for better performance
+      ProcessAllEnabledTabsParallel();
+
+      // Mark files as changed for disabled tabs
+      foreach (var tab in tabs.Where(t => !t.IsWatchingEnabled))
+      {
+        if (tab.TabItem.IsSelected == false)
+        {
+          // Set the file changed flag for disabled non active tabs
+          tab.FileChangedFlag = true;
+        }
       }
     }
 
@@ -1495,20 +1501,8 @@ namespace X4LogWatcher
           // Simulate the file change event
           Dispatcher.Invoke(() =>
           {
-            // Process each tab based on its watching state
-            foreach (var tab in tabs)
-            {
-              if (tab.IsWatchingEnabled)
-              {
-                // If watching is enabled, process the content now
-                ProcessTabContent(tab);
-              }
-              else
-              {
-                // If watching is disabled, just mark the file changed flag
-                tab.FileChangedFlag = true;
-              }
-            }
+            // Process changes as if the file was modified
+            ProcessChanges();
           });
         }
       }
