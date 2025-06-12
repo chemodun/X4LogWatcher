@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.7.0](https://github.com/chemodun/X4LogWatcher/compare/v0.6.0...v0.7.0) (2025-06-12)
+
+
+### Features
+
+* implement virtual content management for large files in TabInfo ([3a50975](https://github.com/chemodun/X4LogWatcher/commit/3a509759d402cd1b424def10cfe0a919ab2c7ade))
+
+
+### Bug Fixes
+
+* add resource cleanup on window closing ([a44ae0a](https://github.com/chemodun/X4LogWatcher/commit/a44ae0a93d27d28e0c5a6d8ec97254202eb4a5bb))
+* implement IDisposable for TabInfo ([868195f](https://github.com/chemodun/X4LogWatcher/commit/868195f3554b14c7349ca49228cb3d24365599ea))
+* prevent focus shift when selecting auto-created tabs ([18f59a3](https://github.com/chemodun/X4LogWatcher/commit/18f59a347502c5605da9b6bb4076c7f6609055da))
+
+
+### Code Refactoring
+
+* enhance auto-scrolling behavior and add scroll detection for tabs ([b71e2ce](https://github.com/chemodun/X4LogWatcher/commit/b71e2ce7757fc8f45a3bf42250612085a6c46454))
+
+
+### Documentation
+
+* **bbcode:** Update bbcode files ([6b1e77c](https://github.com/chemodun/X4LogWatcher/commit/6b1e77c465617b58e27697469a6a8dc0c7620980))
+* **bbcode:** Update bbcode files ([32b31d7](https://github.com/chemodun/X4LogWatcher/commit/32b31d79d6924741bfe6556296900e60cd51c5ee))
+* update README for clarity and correct demo link ([3e15f94](https://github.com/chemodun/X4LogWatcher/commit/3e15f945e55474a78e6cee8811c69eaf8dd547fd))
+
+
+### Reverts
+
+* "feat: implement virtual content management for large files in TabInfo" ([d3e2cf9](https://github.com/chemodun/X4LogWatcher/commit/d3e2cf9a421b3cd768c11cf7e6c38c56077a3a07))
+
 ## [0.6.0](https://github.com/chemodun/X4LogWatcher/compare/v0.5.0...v0.6.0) (2025-05-13)
 
 
