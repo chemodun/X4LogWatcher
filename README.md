@@ -109,7 +109,7 @@ In some cases too many tabs can fill a whole window of a tool. There is limitati
 ### [0.7.0] - 2025-06-12
 
 - Fixed:
-  - Possible memory leaks (Thanks [toshibdib](https://next.nexusmods.com/profile/shibdib) for the report)
+  - Possible memory leaks (Thanks to [toshibdib](https://next.nexusmods.com/profile/shibdib) for the report)
   - Focus shift on newly created AutoTab
   - On update a tab the position is always set to the end of the content
 
