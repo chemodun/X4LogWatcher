@@ -106,6 +106,13 @@ In some cases too many tabs can fill a whole window of a tool. There is limitati
 [/list]
 [size=130][u]Changelog[/u][/size]
 
+[size=125][u][0.7.1] - 2025-06-12[/u][/size]
+[list]
+[*] Changed:
+[list]
+[*] Unify processing changes in the log file for both "standard" and forced refresh modes.
+[/list]
+[/list]
 [size=125][u][0.7.0] - 2025-06-12[/u][/size]
 [list]
 [*] Fixed:
