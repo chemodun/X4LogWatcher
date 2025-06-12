@@ -1,6 +1,5 @@
 using System;
 using System.ComponentModel;
-using System.IO;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -134,13 +133,6 @@ namespace X4LogWatcher
     // Validation state
     public bool IsRegexValid { get; private set; }
 
-    // Virtual content management for large files
-    private readonly string? _tempFilePath;
-    private long _totalContentLength;
-    private const long MAX_MEMORY_CONTENT = 25_000_000; // 25MB in memory
-    private const long KEEP_RECENT_CONTENT = 5_000_000; // Keep last 5MB in memory
-    private bool _isUsingDiskStorage = false;
-
     /// <summary>
     /// Creates a new TabInfo with references to all controls
     /// </summary>
@@ -170,11 +162,6 @@ namespace X4LogWatcher
       AfterLines = afterLinesTextBox.Value.HasValue ? (int)afterLinesTextBox.Value : 0;
       AfterLinesCurrent = 0;
       IsAutoCreated = isAutoCreated;
-
-      // Initialize virtual content management
-      _tempFilePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"X4LogWatcher_Tab_{Guid.NewGuid():N}.tmp");
-      _totalContentLength = 0;
-      _isUsingDiskStorage = false;
 
       // Wire up events
       RegexTextBox.TextChanged += RegexTextBox_TextChanged;
@@ -342,9 +329,6 @@ namespace X4LogWatcher
           SetHasNewContent(true);
         }
       }
-
-      // Check if we need to optimize memory after adding content
-      OptimizeMemoryIfNeeded();
     }
 
     /// <summary>
@@ -394,81 +378,6 @@ namespace X4LogWatcher
       catch
       {
         return 0;
-      }
-    }
-
-    /// <summary>
-    /// Optimize memory usage by moving old content to disk if needed
-    /// </summary>
-    public void OptimizeMemoryIfNeeded()
-    {
-      if (_disposed || ContentTextBox == null)
-        return;
-
-      try
-      {
-        var currentLength = ContentTextBox.Text.Length;
-
-        if (currentLength > MAX_MEMORY_CONTENT)
-        {
-          // Keep only the most recent content in memory
-          var text = ContentTextBox.Text;
-          var keepFromIndex = Math.Max(0, currentLength - (int)KEEP_RECENT_CONTENT);
-
-          // Find a good line boundary to cut at
-          var cutIndex = text.LastIndexOf('\n', keepFromIndex);
-          if (cutIndex < 0)
-            cutIndex = keepFromIndex;
-
-          var oldContent = text.Substring(0, cutIndex);
-          var recentContent = text.Substring(cutIndex);
-
-          // Save old content to disk if we have a temp file path
-          if (!string.IsNullOrEmpty(_tempFilePath))
-          {
-            File.AppendAllText(_tempFilePath, oldContent);
-            _isUsingDiskStorage = true;
-          }
-
-          // Keep only recent content in memory
-          ContentTextBox.Text = recentContent;
-          _totalContentLength += oldContent.Length;
-
-          System.Diagnostics.Debug.WriteLine(
-            $"Tab '{TabName}' optimized: moved {oldContent.Length} chars to disk, kept {recentContent.Length} in memory"
-          );
-        }
-      }
-      catch (Exception ex)
-      {
-        System.Diagnostics.Debug.WriteLine($"Error optimizing memory for tab '{TabName}': {ex.Message}");
-      }
-    }
-
-    /// <summary>
-    /// Get the full content including disk-stored content (expensive operation)
-    /// </summary>
-    public string GetFullContent()
-    {
-      if (_disposed)
-        return string.Empty;
-
-      try
-      {
-        var memoryContent = ContentTextBox?.Text ?? string.Empty;
-
-        if (_isUsingDiskStorage && !string.IsNullOrEmpty(_tempFilePath) && File.Exists(_tempFilePath))
-        {
-          var diskContent = File.ReadAllText(_tempFilePath);
-          return diskContent + memoryContent;
-        }
-
-        return memoryContent;
-      }
-      catch (Exception ex)
-      {
-        System.Diagnostics.Debug.WriteLine($"Error reading full content for tab '{TabName}': {ex.Message}");
-        return ContentTextBox?.Text ?? string.Empty;
       }
     }
 
@@ -679,22 +588,6 @@ namespace X4LogWatcher
           if (ContentTextBox != null && ContentTextBox.Text.Length > 10_000_000) // 10MB threshold
           {
             ContentTextBox.Clear();
-          }
-
-          // Clean up temporary file if it exists
-          if (_isUsingDiskStorage && !string.IsNullOrEmpty(_tempFilePath))
-          {
-            try
-            {
-              if (File.Exists(_tempFilePath))
-              {
-                File.Delete(_tempFilePath);
-              }
-            }
-            catch (Exception deleteEx)
-            {
-              System.Diagnostics.Debug.WriteLine($"Error deleting temp file {_tempFilePath}: {deleteEx.Message}");
-            }
           }
         }
         catch (Exception ex)
