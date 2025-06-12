@@ -98,11 +98,15 @@ In some cases too many tabs can fill a whole window of a tool. There is limitati
 
 [size=3][u][b]Links[/b][/u][/size]
 [list]
-[*] A short demo showcasing the tool features introduced in version 0.2.0: [url=https://youtube.com/watch?v=6cPAfx4gxTA]X4 Log Watcher Demo[/url].
-[*] A short demo showcasing the new features introduced in version 0.3.0: [url=https://youtube.com/watch?v=wRRwymDHv1g]X4 Log Watcher Demo - Version 0.3.0[/url].
-[*] A short demo showcasing the new features introduced in version 0.4.0: [url=https://youtube.com/watch?v=1LO7Upyd3ZM]X4 Log Watcher Demo - Version 0.4.0[/url].
-[*] A short demo showcasing the new features introduced in version 0.6.0: [url=https://youtube.com/watch?v=a77PBN25-jo]X4 Log Watcher Demo - Version 0.6.0[/url].
-[*] There is a topic on the [url=https://forum.egosoft.com/viewtopic.php?t=470624]Egosoft forum[/url], related to this tool.
+[*] A short demo showcasing the tool features introduced in version 0.2.0: X4 Log Watcher Demo
+[/list][youtube]6cPAfx4gxTA[/youtube].
+[list][*] A short demo showcasing the new features introduced in version 0.3.0: X4 Log Watcher Demo - Version 0.3.0
+[/list][youtube]wRRwymDHv1g[/youtube].
+[list][*] A short demo showcasing the new features introduced in version 0.4.0: X4 Log Watcher Demo - Version 0.4.0
+[/list][youtube]1LO7Upyd3ZM[/youtube].
+[list][*] A short demo showcasing the new features introduced in version 0.6.0: X4 Log Watcher Demo - Version 0.6.0
+[/list][youtube]a77PBN25-jo[/youtube].
+[list][*] There is a topic on the [url=https://forum.egosoft.com/viewtopic.php?t=470624]Egosoft forum[/url], related to this tool.
 [/list]
 [size=3][u][b]Changelog[/b][/u][/size]
 
@@ -110,7 +114,7 @@ In some cases too many tabs can fill a whole window of a tool. There is limitati
 [list]
 [*] Fixed:
 [list]
-[*] Possible memory leaks
+[*] Possible memory leaks (Thanks [url=https://next.nexusmods.com/profile/shibdib]toshibdib[/url] for the report)
 [*] Focus shift on newly created AutoTab
 [*] On update a tab the position is always set to the end of the content
 [/list]
