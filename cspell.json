@@ -1,16 +1,22 @@
 {
     "version": "0.2",
-    "ignorePaths": [],
+    "ignorePaths": [
+        "*.code-workspace",
+        ".*"
+    ],
     "dictionaryDefinitions": [],
     "dictionaries": [
         "en"
     ],
     "words": [
+        "aicontext",
         "Egosoft",
+        "finalizer",
         "ghaction",
         "Headered",
         "logwatcher",
         "softprops",
+        "toshibdib",
         "tzip"
     ],
     "ignoreWords": [],
