@@ -64,7 +64,8 @@
         "[csharp]": {
             "editor.formatOnSave": true,
             "editor.defaultFormatter": "csharpier.csharpier-vscode"
-        }
+        },
+        "dotnet.server.useOmnisharp": true
     },
     "extensions": {
         "recommendations": [

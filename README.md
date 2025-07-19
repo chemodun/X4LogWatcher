@@ -16,10 +16,11 @@ X4 Log Watcher is a simple tool to monitor the log files of X4: Foundations. It 
 - Support simple text search in current filtered content via Ctrl+F and F3(Enter)/Shift+F3 for next/previous search result
 - Has a status bar with the current log file name and it's stats. Additionally shows the loading progress of the log file in the offline mode
 - Shows the updates in non-focused tabs via "bolding" and adding the notification symbol "🔔" to the tab name
-- Can show up to 10 lines after the matched line in the log file. Useful for showing the error details in the scripts
 - Extension for the log file is configurable via editing of the config file. By default, it is set to `.log`
 - Has option to skip the signature related errors in the log file. By default, it is set to `true`
 - Has option to add "real" timestamp to the filtered content. By default, it is set to `false`
+- Supports AutoTabs feature - automatically create tabs based on the appropriate regex pattern from log file content
+- Supports multi-lined log entries, allowing the tool to handle log entries that span multiple lines
 
 ## Requirements
 
@@ -61,6 +62,12 @@ To use X4 Log Watcher, follow these steps:
 
 ![Common errors parsing](docs/images/common_errors_parsing.png)
 ![Exact ship monitoring](docs/images/exact_ship_monitoring.png)
+
+## Multi-lined log entries
+
+The tool can now handle log entries that span multiple lines, making it easier to read and analyze complex log messages. Regex patterns can be applied to only the first line of the multi-lined entry. Same rule is applied to the AutoTabs and TimeStamping features.
+
+![Multi-lined log entries](docs/images/multi-lined.png)
 
 ## AutoTabs feature
 
@@ -105,6 +112,11 @@ In some cases too many tabs can fill a whole window of a tool. There is limitati
 - There is a topic on the [Egosoft forum](https://forum.egosoft.com/viewtopic.php?t=470624), related to this tool.
 
 ## Changelog
+
+### [0.8.0] - 2025-07-20
+
+- Added:
+  - Support for the multi-lined log entries. Now the tool can handle log entries that span multiple lines, making it easier to read and analyze complex log messages. Regex patterns can be applied to only the first line of the multi-lined entry.
 
 ### [0.7.1] - 2025-06-12
 

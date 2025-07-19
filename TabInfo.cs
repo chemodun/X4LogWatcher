@@ -70,6 +70,7 @@ namespace X4LogWatcher
         if (_isWatchingEnabled && FileChangedFlag)
         {
           FilePosition = 0;
+          IsInMultilineSequence = false; // Reset multiline state
           ClearContent();
           FileChangedFlag = false;
           // The actual processing will be done by the MainWindow class
@@ -97,6 +98,9 @@ namespace X4LogWatcher
 
     // Counter for tracking remaining lines to include after a match
     public int AfterLinesCurrent { get; set; }
+
+    // Multiline log support - tracks if this tab is currently in a multiline log sequence
+    public bool IsInMultilineSequence { get; set; }
 
     public long FilePosition { get; set; }
     public Regex? CompiledRegex { get; private set; }
@@ -162,6 +166,7 @@ namespace X4LogWatcher
       AfterLines = afterLinesTextBox.Value.HasValue ? (int)afterLinesTextBox.Value : 0;
       AfterLinesCurrent = 0;
       IsAutoCreated = isAutoCreated;
+      IsInMultilineSequence = false; // Initialize multiline state
 
       // Wire up events
       RegexTextBox.TextChanged += RegexTextBox_TextChanged;

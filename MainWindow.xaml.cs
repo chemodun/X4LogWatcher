@@ -601,6 +601,7 @@ namespace X4LogWatcher
           // Reset file position to process from the beginning with new regex
           tabInfo.UpdateTabHeader();
           tabInfo.FilePosition = 0;
+          tabInfo.IsInMultilineSequence = false; // Reset multiline state
           tabInfo.ClearContent();
           ProcessTabContent(tabInfo);
         }
@@ -627,6 +628,7 @@ namespace X4LogWatcher
             {
               // Reset file position to process from the beginning when enabling a tab
               tabInfo.FilePosition = 0;
+              tabInfo.IsInMultilineSequence = false; // Reset multiline state
               tabInfo.ClearContent();
               tabInfo.FileChangedFlag = false;
             }
@@ -944,6 +946,7 @@ namespace X4LogWatcher
             tab.HasNewContent = false;
             // Reset position to read from beginning
             tab.FilePosition = 0;
+            tab.IsInMultilineSequence = false; // Reset multiline state
             // Clear content for the tab
             tab.ClearContent();
           }
@@ -1033,6 +1036,7 @@ namespace X4LogWatcher
           {
             tab.FilePosition = 0;
             tab.AfterLinesCurrent = 0; // Reset after lines counter when file is reset
+            tab.IsInMultilineSequence = false; // Reset multiline state
             needFullRead = true;
           }
           tab.FileChangedFlag = false; // Reset file changed flag
@@ -1045,6 +1049,7 @@ namespace X4LogWatcher
           {
             tab.FilePosition = 0;
             tab.AfterLinesCurrent = 0; // Reset after lines counter when file is reset
+            tab.IsInMultilineSequence = false; // Reset multiline state
           }
         }
 
@@ -1058,7 +1063,7 @@ namespace X4LogWatcher
 
         // Read the file line by line just once for all tabs
         using var reader = new StreamReader(stream);
-        var fileLines = new List<(long position, string text)>();
+        var fileLines = new List<(long position, string text, DateTime timestamp)>();
         string? line;
 
         // Read the whole file for full update, or just new portion for incremental update
@@ -1081,11 +1086,8 @@ namespace X4LogWatcher
             && (line.Contains("Failed to verify the file signature for file") || line.Contains("Could not find signature file"))
           )
             continue;
-          if (AppConfig.RealTimeStamping)
-          {
-            line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " | " + line;
-          }
-          fileLines.Add((stream.Position, line));
+
+          fileLines.Add((stream.Position, line, DateTime.Now));
         }
 
         // Check for auto tabs first, creating new ones as needed
@@ -1093,12 +1095,15 @@ namespace X4LogWatcher
 
         // Process each line to check for auto tab matches
         // This needs to be done sequentially since it might create new tabs
-        foreach (var (position, logLine) in fileLines)
+        foreach (var (position, logLine, timestamp) in fileLines)
         {
-          var autoTab = CheckAndCreateAutoTab(logLine);
-          if (autoTab != null && !enabledTabs.Contains(autoTab) && !additionalTabs.Contains(autoTab))
+          if (IsFirstLineOfMultilineLog(logLine))
           {
-            additionalTabs.Add(autoTab);
+            var autoTab = CheckAndCreateAutoTab(logLine);
+            if (autoTab != null && !enabledTabs.Contains(autoTab) && !additionalTabs.Contains(autoTab))
+            {
+              additionalTabs.Add(autoTab);
+            }
           }
         }
 
@@ -1116,43 +1121,77 @@ namespace X4LogWatcher
             var contentBuilder = new StringBuilder();
             bool processFromBeginning = tab.FilePosition == 0;
 
-            // Reset after lines counter when starting from beginning
+            // Reset after lines counter and multiline state when starting from beginning
             if (processFromBeginning)
             {
               tab.AfterLinesCurrent = 0;
+              tab.IsInMultilineSequence = false;
             }
 
             // Get only lines after tab's last position
-            var linesToProcess = fileLines
-              .Where(l =>
-              {
-                var position = l.position;
-                if (position <= tab.FilePosition)
-                  return false;
-                return true;
-              })
-              .Select(l => l.text);
+            var linesToProcess = fileLines.Where(l =>
+            {
+              var position = l.position;
+              if (position <= tab.FilePosition)
+                return false;
+              return true;
+            });
 
             foreach (var currentLine in linesToProcess)
             {
               if (tab.CompiledRegex != null)
               {
-                bool isMatch = tab.CompiledRegex.IsMatch(currentLine);
-                if (isMatch)
+                bool isFirstLine = IsFirstLineOfMultilineLog(currentLine.text);
+                bool isMatch = false;
+                string lineText = currentLine.text;
+                if (AppConfig.RealTimeStamping && isFirstLine)
                 {
-                  contentBuilder.AppendLine(currentLine);
-
-                  // If this is a match, reset the after lines counter to the configured value
-                  if (tab.AfterLines > 0)
+                  lineText = currentLine.timestamp.ToString("yyyy-MM-dd HH:mm:ss") + " | " + lineText;
+                }
+                // Only check regex pattern against first lines (lines starting with '[')
+                if (isFirstLine)
+                {
+                  isMatch = tab.CompiledRegex.IsMatch(currentLine.text);
+                  if (isMatch)
                   {
-                    tab.AfterLinesCurrent = tab.AfterLines;
+                    // Start a new multiline sequence
+                    tab.IsInMultilineSequence = true;
+
+                    contentBuilder.AppendLine(lineText);
+
+                    // If this is a match, reset the after lines counter to the configured value
+                    if (tab.AfterLines > 0)
+                    {
+                      tab.AfterLinesCurrent = tab.AfterLines;
+                    }
+                  }
+                  else
+                  {
+                    // This first line doesn't match, end any current multiline sequence
+                    tab.IsInMultilineSequence = false;
                   }
                 }
-                // If we're in the "after lines" period, include this line too
-                else if (tab.AfterLinesCurrent > 0)
+                else
                 {
-                  contentBuilder.AppendLine(currentLine);
-                  // Decrement the counter
+                  // This is a continuation line (not starting with '[')
+                  if (tab.IsInMultilineSequence)
+                  {
+                    // We're in a multiline sequence, include this line
+                    contentBuilder.AppendLine(lineText);
+                  }
+                  else if (tab.AfterLinesCurrent > 0)
+                  {
+                    // We're in the "after lines" period, include this line too
+                    contentBuilder.AppendLine(lineText);
+                    // Decrement the counter
+                    tab.AfterLinesCurrent--;
+                  }
+                }
+
+                // Handle "after lines" logic for first lines that didn't match
+                if (isFirstLine && !isMatch && tab.AfterLinesCurrent > 0)
+                {
+                  contentBuilder.AppendLine(lineText);
                   tab.AfterLinesCurrent--;
                 }
               }
@@ -1247,10 +1286,11 @@ namespace X4LogWatcher
         long lastReportedProgress = 0;
         bool processFromBeginning = tab.FilePosition == 0;
 
-        // Reset after lines counter when starting from beginning
+        // Reset after lines counter and multiline state when starting from beginning
         if (processFromBeginning)
         {
           tab.AfterLinesCurrent = 0;
+          tab.IsInMultilineSequence = false;
         }
 
         // Process file line by line
@@ -1264,27 +1304,58 @@ namespace X4LogWatcher
           )
             continue;
 
-          // Check if line matches regex
-          bool isMatch = tab.CompiledRegex.IsMatch(line);
-          if (AppConfig.RealTimeStamping)
+          // Implement multiline logic
+          bool isFirstLine = IsFirstLineOfMultilineLog(line);
+          bool isMatch = false;
+
+          if (AppConfig.RealTimeStamping && isFirstLine)
           {
             line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " | " + line;
           }
-          if (isMatch)
-          {
-            contentBuilder.AppendLine(line);
 
-            // If this is a match, reset the after lines counter to the configured value
-            if (tab.AfterLines > 0)
+          // Only check regex pattern against first lines (lines starting with '[')
+          if (isFirstLine)
+          {
+            isMatch = tab.CompiledRegex.IsMatch(line);
+            if (isMatch)
             {
-              tab.AfterLinesCurrent = tab.AfterLines;
+              // Start a new multiline sequence
+              tab.IsInMultilineSequence = true;
+              contentBuilder.AppendLine(line);
+
+              // If this is a match, reset the after lines counter to the configured value
+              if (tab.AfterLines > 0)
+              {
+                tab.AfterLinesCurrent = tab.AfterLines;
+              }
+            }
+            else
+            {
+              // This first line doesn't match, end any current multiline sequence
+              tab.IsInMultilineSequence = false;
             }
           }
-          // If we're in the "after lines" period, include this line too
-          else if (tab.AfterLinesCurrent > 0)
+          else
+          {
+            // This is a continuation line (not starting with '[')
+            if (tab.IsInMultilineSequence)
+            {
+              // We're in a multiline sequence, include this line
+              contentBuilder.AppendLine(line);
+            }
+            else if (tab.AfterLinesCurrent > 0)
+            {
+              // We're in the "after lines" period, include this line too
+              contentBuilder.AppendLine(line);
+              // Decrement the counter
+              tab.AfterLinesCurrent--;
+            }
+          }
+
+          // Handle "after lines" logic for first lines that didn't match
+          if (isFirstLine && !isMatch && tab.AfterLinesCurrent > 0)
           {
             contentBuilder.AppendLine(line);
-            // Decrement the counter
             tab.AfterLinesCurrent--;
           }
 
@@ -1800,11 +1871,16 @@ namespace X4LogWatcher
 
     /// <summary>
     /// Checks if a line matches any auto tab configuration, and creates a new tab if needed.
+    /// Only checks first lines (lines starting with '[') for auto tab patterns.
     /// Returns the tab that matches, or null if no auto tabs match.
     /// </summary>
     private TabInfo? CheckAndCreateAutoTab(string line)
     {
       if (autoTabConfigs.Count == 0)
+        return null;
+
+      // Only check auto tab patterns against first lines (lines starting with '[')
+      if (!IsFirstLineOfMultilineLog(line))
         return null;
 
       foreach (var config in autoTabConfigs)
@@ -1912,6 +1988,17 @@ namespace X4LogWatcher
       {
         Debug.WriteLine($"Error saving configuration: {ex.Message}");
       }
+    }
+
+    /// <summary>
+    /// Helper method to determine if a line is a "first line" in a multiline log entry.
+    /// First lines are defined as lines that start with '[' character.
+    /// </summary>
+    /// <param name="line">The line to check</param>
+    /// <returns>True if this is a first line (starts with '['), false otherwise</returns>
+    private static bool IsFirstLineOfMultilineLog(string line)
+    {
+      return !string.IsNullOrEmpty(line) && line.TrimStart().StartsWith('[');
     }
   }
 }
