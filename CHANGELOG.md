@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/chemodun/X4LogWatcher/compare/v0.7.1...v0.8.0) (2025-07-19)
+
+
+### Documentation
+
+* **bbcode:** Update bbcode files ([aa67dcf](https://github.com/chemodun/X4LogWatcher/commit/aa67dcf29230fcba9decb02c93a7304daf3696a2))
+
 ## [0.7.1](https://github.com/chemodun/X4LogWatcher/compare/v0.7.0...v0.7.1) (2025-06-12)
 
 
