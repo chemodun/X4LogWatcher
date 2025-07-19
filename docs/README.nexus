@@ -16,10 +16,11 @@ X4 Log Watcher is a simple tool to monitor the log files of X4: Foundations. It 
 [*] Support simple text search in current filtered content via Ctrl+F and F3(Enter)/Shift+F3 for next/previous search result
 [*] Has a status bar with the current log file name and it's stats. Additionally shows the loading progress of the log file in the offline mode
 [*] Shows the updates in non-focused tabs via "bolding" and adding the notification symbol "🔔" to the tab name
-[*] Can show up to 10 lines after the matched line in the log file. Useful for showing the error details in the scripts
 [*] Extension for the log file is configurable via editing of the config file. By default, it is set to [b].log[/b]
 [*] Has option to skip the signature related errors in the log file. By default, it is set to [b]true[/b]
 [*] Has option to add "real" timestamp to the filtered content. By default, it is set to [b]false[/b]
+[*] Supports AutoTabs feature - automatically create tabs based on the appropriate regex pattern from log file content
+[*] Supports multi-lined log entries, allowing the tool to handle log entries that span multiple lines
 [/list]
 [size=3][u][b]Requirements[/b][/u][/size]
 
@@ -61,6 +62,12 @@ To use X4 Log Watcher, follow these steps:
 [/list]
 [img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/common_errors_parsing.png[/img]
 [img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/exact_ship_monitoring.png[/img]
+
+[size=3][u][b]Multi-lined log entries[/b][/u][/size]
+
+The tool can now handle log entries that span multiple lines, making it easier to read and analyze complex log messages. Regex patterns can be applied to only the first line of the multi-lined entry. Same rule is applied to the AutoTabs and TimeStamping features.
+
+[img]https://raw.githubusercontent.com/chemodun/X4LogWatcher/refs/heads/main/docs/images/multi-lined.png[/img]
 
 [size=3][u][b]AutoTabs feature[/b][/u][/size]
 
@@ -110,6 +117,13 @@ In some cases too many tabs can fill a whole window of a tool. There is limitati
 [/list]
 [size=3][u][b]Changelog[/b][/u][/size]
 
+[size=3][u][i][0.8.0] - 2025-07-20[/i][/u][/size]
+[list]
+[*] Added:
+[list]
+[*] Support for the multi-lined log entries. Now the tool can handle log entries that span multiple lines, making it easier to read and analyze complex log messages. Regex patterns can be applied to only the first line of the multi-lined entry.
+[/list]
+[/list]
 [size=3][u][i][0.7.1] - 2025-06-12[/i][/u][/size]
 [list]
 [*] Changed:
