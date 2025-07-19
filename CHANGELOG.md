@@ -3,6 +3,9 @@
 ## [0.8.0](https://github.com/chemodun/X4LogWatcher/compare/v0.7.1...v0.8.0) (2025-07-19)
 
 
+### Features
+* Implement possibility to handle log entries that span multiple lines, making it easier to read and analyze complex log messages ([bc1feeb](https://github.com/chemodun/X4LogWatcher/commit/bc1feeb634b47d472b7cd52400bb7b530bb3e014))
+
 ### Documentation
 
 * **bbcode:** Update bbcode files ([aa67dcf](https://github.com/chemodun/X4LogWatcher/commit/aa67dcf29230fcba9decb02c93a7304daf3696a2))
