@@ -21,8 +21,7 @@ namespace X4LogWatcher
   public partial class MainWindow : MetroWindow, INotifyPropertyChanged
   {
     private string? logFolderPath;
-    private FileSystemWatcher? fileWatcher;
-    private FileSystemWatcher? folderWatcher;
+    private ResilientFileWatcher? watcher;
 
     private bool _isWatchingFile;
     public bool IsWatchingFile
@@ -349,10 +348,9 @@ namespace X4LogWatcher
 
     private void StartWatchingFolder(string folderPath)
     {
-      if (folderWatcher != null)
+      if (watcher != null)
       {
-        folderWatcher.Dispose();
-        folderWatcher = null;
+        watcher.Dispose();
       }
 
       if (!Directory.Exists(folderPath))
@@ -364,24 +362,12 @@ namespace X4LogWatcher
       CurrentLogFolder = folderPath;
 
       // Set up a watcher for the folder to detect all log files
-      folderWatcher = new FileSystemWatcher(folderPath, $"*{AppConfig.LogFileExtension}")
-      {
-        NotifyFilter =
-          NotifyFilters.Attributes
-          | NotifyFilters.CreationTime
-          | NotifyFilters.DirectoryName
-          | NotifyFilters.FileName
-          | NotifyFilters.LastWrite
-          | NotifyFilters.Security
-          | NotifyFilters.Size,
-        InternalBufferSize = 64 * 1024 * 1024, // Increase buffer size
-        EnableRaisingEvents = true,
-      };
+      watcher = new ResilientFileWatcher(folderPath, $"*{AppConfig.LogFileExtension}", false);
 
       // Subscribe to events
-      folderWatcher.Changed += OnFolderFileChanged;
-      folderWatcher.Created += OnFolderFileCreated;
-      folderWatcher.Error += OnFolderWatcherError;
+      watcher.Changed += OnFolderFileChanged;
+      watcher.Created += OnFolderFileCreated;
+      watcher.Start();
     }
 
     private void OnFolderWatcherError(object sender, ErrorEventArgs e)
@@ -401,7 +387,7 @@ namespace X4LogWatcher
         Console.WriteLine($"New file created: {e.FullPath}");
 
         // Check if the new file is a log file
-        if (Path.GetExtension(e.FullPath).Equals(".log", StringComparison.OrdinalIgnoreCase))
+        if (Path.GetExtension(e.FullPath).Equals($"{AppConfig.LogFileExtension}", StringComparison.OrdinalIgnoreCase))
         {
           // Wait a moment for the file to be accessible
           System.Threading.Thread.Sleep(500);
@@ -409,7 +395,7 @@ namespace X4LogWatcher
           // Switch to monitoring the new file since it's just been created
           Dispatcher.Invoke(() =>
           {
-            StartWatching(e.FullPath);
+            StartWatching(e.FullPath, true);
           });
         }
       }
@@ -424,14 +410,18 @@ namespace X4LogWatcher
       try
       {
         // Check if the new file is a log file
-        if (Path.GetExtension(e.FullPath).Equals(".log", StringComparison.OrdinalIgnoreCase))
+        if (Path.GetExtension(e.FullPath).Equals($"{AppConfig.LogFileExtension}", StringComparison.OrdinalIgnoreCase))
         {
           Dispatcher.Invoke(() =>
           {
-            StartWatching(e.FullPath);
-            if (folderWatcher != null)
+            if (CurrentLogFile == e.FullPath)
             {
-              folderWatcher.Changed -= OnFolderFileChanged;
+              // Already watching this file, no action needed
+              OnSingleFileChanged(sender, e);
+            }
+            else
+            {
+              StartWatching(e.FullPath, true);
             }
           });
         }
@@ -894,10 +884,8 @@ namespace X4LogWatcher
       }
     }
 
-    private void StartWatching(string filePath)
+    private void StartWatching(string filePath, bool isAlreadyWatched = false)
     {
-      fileWatcher?.Dispose();
-
       // Store the previous file path before updating
       string? previousLogFile = _currentLogFile;
 
@@ -914,21 +902,6 @@ namespace X4LogWatcher
         return;
       }
 
-      fileWatcher = new FileSystemWatcher(directoryPath, Path.GetFileName(filePath))
-      {
-        NotifyFilter =
-          NotifyFilters.Attributes
-          | NotifyFilters.CreationTime
-          | NotifyFilters.DirectoryName
-          | NotifyFilters.FileName
-          | NotifyFilters.LastWrite
-          | NotifyFilters.Security
-          | NotifyFilters.Size,
-        InternalBufferSize = 64 * 1024 * 1024, // Increase buffer size
-        EnableRaisingEvents = true,
-      };
-
-      fileWatcher.Changed += OnSingleFileChanged;
       List<TabInfo> tabsToClose = [];
       // Inform all tabs about the file change
       foreach (var tab in tabs)
@@ -964,6 +937,17 @@ namespace X4LogWatcher
       }
 
       ProcessAllEnabledTabsParallel();
+      if (!isAlreadyWatched)
+      {
+        if (watcher != null)
+        {
+          watcher.Dispose();
+        }
+        watcher = new ResilientFileWatcher(directoryPath, Path.GetFileName(filePath), false);
+
+        watcher.Changed += OnSingleFileChanged;
+        watcher.Start();
+      }
     }
 
     private void OnSingleFileChanged(object sender, FileSystemEventArgs e)
@@ -1244,11 +1228,14 @@ namespace X4LogWatcher
       }
     }
 
-    private static string? FindMostRecentLogFile(string folderPath)
+    private string? FindMostRecentLogFile(string folderPath)
     {
       try
       {
-        var logFiles = Directory.GetFiles(folderPath, "*.log").OrderByDescending(f => new FileInfo(f).LastWriteTime).ToList();
+        var logFiles = Directory
+          .GetFiles(folderPath, $"*{AppConfig.LogFileExtension}")
+          .OrderByDescending(f => new FileInfo(f).LastWriteTime)
+          .ToList();
 
         return logFiles.Count > 0 ? logFiles[0] : null;
       }
@@ -1931,30 +1918,14 @@ namespace X4LogWatcher
 
     private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
-      // Clean up file and folder watchers
-      if (fileWatcher != null)
+      if (watcher != null)
       {
         try
         {
-          fileWatcher.Changed -= OnSingleFileChanged;
-          fileWatcher.Dispose();
-          fileWatcher = null;
-        }
-        catch (Exception ex)
-        {
-          Debug.WriteLine($"Error disposing fileWatcher: {ex.Message}");
-        }
-      }
-
-      if (folderWatcher != null)
-      {
-        try
-        {
-          folderWatcher.Changed -= OnFolderFileChanged;
-          folderWatcher.Created -= OnFolderFileCreated;
-          folderWatcher.Error -= OnFolderWatcherError;
-          folderWatcher.Dispose();
-          folderWatcher = null;
+          watcher.Changed -= OnFolderFileChanged;
+          watcher.Created -= OnFolderFileCreated;
+          watcher.Dispose();
+          watcher = null;
         }
         catch (Exception ex)
         {
