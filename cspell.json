@@ -16,6 +16,7 @@
         "Headered",
         "logwatcher",
         "softprops",
+        "Subdirs",
         "toshibdib",
         "tzip"
     ],
