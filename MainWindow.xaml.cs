@@ -211,6 +211,7 @@ namespace X4LogWatcher
 
       // Load application configuration
       AppConfig = Config.LoadConfig();
+      AppConfig.PropertyChanged += AppConfig_PropertyChanged;
 
       // Initialize recent profiles menu
       UpdateRecentProfilesMenu();
@@ -572,6 +573,7 @@ namespace X4LogWatcher
         IsReadOnly = true,
         VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
         HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+        FontFamily = AppConfig.UseMonospaceFont ? new FontFamily("Consolas") : SystemFonts.MessageFontFamily,
       };
 
       // Add Enter key handling for search navigation when content box has focus
@@ -1914,6 +1916,18 @@ namespace X4LogWatcher
     protected void OnPropertyChanged(string propertyName)
     {
       PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    private void AppConfig_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+      if (e.PropertyName == nameof(Config.UseMonospaceFont))
+      {
+        var fontFamily = AppConfig.UseMonospaceFont ? new FontFamily("Consolas") : null;
+        foreach (var tab in tabs)
+        {
+          tab.ContentTextBox.FontFamily = fontFamily ?? SystemFonts.MessageFontFamily;
+        }
+      }
     }
 
     private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)

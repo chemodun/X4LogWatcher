@@ -21,6 +21,7 @@ namespace X4LogWatcher
     private string _logFileExtension = ".log";
     private bool _skipSignatureErrors = true;
     private bool _realTimeStamping;
+    private bool _useMonospaceFont;
     private JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions { WriteIndented = true };
 
     // Properties with notification
@@ -60,6 +61,12 @@ namespace X4LogWatcher
       set => SetProperty(ref _realTimeStamping, value);
     }
 
+    public bool UseMonospaceFont
+    {
+      get => _useMonospaceFont;
+      set => SetProperty(ref _useMonospaceFont, value);
+    }
+
     // Constructor to initialize the ObservableCollection
     public Config()
     {
@@ -86,6 +93,7 @@ namespace X4LogWatcher
           config.LogFileExtension,
           config.SkipSignatureErrors,
           config.RealTimeStamping,
+          config.UseMonospaceFont,
         };
 
         // Serialize the config to JSON and write to file
@@ -135,6 +143,10 @@ namespace X4LogWatcher
             if (tempConfig.GetType().GetProperty(nameof(RealTimeStamping)) != null)
             {
               config.RealTimeStamping = tempConfig.RealTimeStamping;
+            }
+            if (tempConfig.GetType().GetProperty(nameof(UseMonospaceFont)) != null)
+            {
+              config.UseMonospaceFont = tempConfig.UseMonospaceFont;
             }
             return config;
           }
