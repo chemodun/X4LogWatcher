@@ -68,6 +68,10 @@
                         Header="Real Time Stamping"
                         IsCheckable="True"
                         IsChecked="{Binding AppConfig.RealTimeStamping, Mode=TwoWay}"/>
+            <MenuItem x:Name="menuMonospaceFont"
+                        Header="Monospace Font"
+                        IsCheckable="True"
+                        IsChecked="{Binding AppConfig.UseMonospaceFont, Mode=TwoWay}"/>
 
             <!-- Right-aligned Exit menu item -->
             <MenuItem x:Name="menuExit"
