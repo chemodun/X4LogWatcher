@@ -238,3 +238,6 @@ FodyWeavers.xsd
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Ignore all dot-folders 
+.*/
