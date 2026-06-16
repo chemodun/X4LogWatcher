@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.0.0](https://github.com/chemodun/X4LogWatcher/compare/v0.8.0...v1.0.0) (2026-06-16)
+
+
+### Features
+
+* add disk-backed line store and virtual line collection ([877da96](https://github.com/chemodun/X4LogWatcher/commit/877da963455234bbf4d6efc1d907dbf5abe5195f))
+* **Config:** add session search history ([8ac891c](https://github.com/chemodun/X4LogWatcher/commit/8ac891c07f484702a3664ed2d0f72f51b6e24a42))
+* **Config:** add UseMonospaceFont property ([81e0371](https://github.com/chemodun/X4LogWatcher/commit/81e03717ce958f8aa8b0fce43a4cbaff3f36bac7))
+* **MainWindow:** integrate monospace font option ([81e0371](https://github.com/chemodun/X4LogWatcher/commit/81e03717ce958f8aa8b0fce43a4cbaff3f36bac7))
+* replace TextBox log viewer with virtualized RichTextBox-based ListBox ([5a48f8d](https://github.com/chemodun/X4LogWatcher/commit/5a48f8dfb28d692958a360850bb0427c533ccbdb))
+
+
+### Bug Fixes
+
+* **MainWindow:** replace FileSystemWatcher with ResilientFileWatcher ([ad19fc0](https://github.com/chemodun/X4LogWatcher/commit/ad19fc0f47d21c74fbee84d3e38c6694f37a48ad))
+* **ResilientFileWatcher:** add resilient file watching capabilities ([ad19fc0](https://github.com/chemodun/X4LogWatcher/commit/ad19fc0f47d21c74fbee84d3e38c6694f37a48ad))
+
+
+### Miscellaneous Chores
+
+* release 1.0.0 ([9c84c76](https://github.com/chemodun/X4LogWatcher/commit/9c84c76086ecdaf1a7233cab483f67420cbea619))
+* update dot-folder exclusion rules in ignore files ([9c4b6d3](https://github.com/chemodun/X4LogWatcher/commit/9c4b6d33b90c08400d34ddaa51f10519b4bf00f6))
+
+
+### Documentation
+
+* **README:** enhance log viewer documentation and features ([d66e8e0](https://github.com/chemodun/X4LogWatcher/commit/d66e8e0ae2a2b81e5222a770f141dce480309738))
+
 ## [0.8.0](https://github.com/chemodun/X4LogWatcher/compare/v0.7.1...v0.8.0) (2025-07-19)
 
 
