@@ -13,9 +13,14 @@ X4 Log Watcher is a simple tool to monitor the log files of X4: Foundations. It 
 - Offline mode - i.e. load the log file from disk and parse it
 - Loading default profile on startup
 - Support a "Forced refresh" mode, if by some reason standard Windows file watcher doesn't work
-- Support simple text search in current filtered content via Ctrl+F and F3(Enter)/Shift+F3 for next/previous search result
-- Has a status bar with the current log file name and it's stats. Additionally shows the loading progress of the log file in the offline mode
+- Search in current filtered content via Ctrl+F and F3 / Shift+F3 for next/previous result; matches are highlighted in-place in yellow; recent searches are available in a dropdown history
+- Row selection: click to select text within a line, Shift+click / Ctrl+click to select whole rows, Ctrl+C to copy as plain text
+- Context menu on log rows: hide all lines before the selected one, or restore them
+- Smart scroll following: each tab tracks whether you were at the bottom; new content auto-scrolls only if you were already there, and the position is preserved when switching between tabs
+- Keyboard navigation: PageUp / PageDown scrolls the log content; Ctrl+PageUp / Ctrl+PageDown jumps to the very top or bottom — all work regardless of which control has focus
+- Has a status bar with the current log file name and its stats; additionally shows the loading progress of the log file in offline mode
 - Shows the updates in non-focused tabs via "bolding" and adding the notification symbol "🔔" to the tab name
+- Option to switch log content font to monospace (Consolas) for better readability of structured log entries
 - Extension for the log file is configurable via editing of the config file. By default, it is set to `.log`
 - Has option to skip the signature related errors in the log file. By default, it is set to `true`
 - Has option to add "real" timestamp to the filtered content. By default, it is set to `false`
@@ -62,6 +67,44 @@ To use X4 Log Watcher, follow these steps:
 
 ![Common errors parsing](docs/images/common_errors_parsing.png)
 ![Exact ship monitoring](docs/images/exact_ship_monitoring.png)
+
+## Log content viewer
+
+Each tab displays its filtered log lines in a virtualized list — only the rows currently visible on screen are rendered, so the tool stays responsive even when thousands of lines have been collected.
+
+### Search and highlighting
+
+Press **Ctrl+F** to open the search bar. If you have text selected inside a log row, it is pre-filled into the search field. The search bar is a dropdown that remembers recent searches across the session.
+
+Every visible line that contains a match is highlighted in yellow directly in the text. Use **F3** (or **Enter**) to jump to the next match and **Shift+F3** to go to the previous one. Press **Escape** or the × button to close the bar.
+
+### Row selection and copy
+
+- **Click and drag** inside a row to select partial text (native text selection).
+- **Shift+click** on a different row to extend the selection to whole rows.
+- **Ctrl+click** to toggle individual whole-row selection.
+- **Triple-click** to select the entire row.
+- **Ctrl+C** copies all selected rows as plain text, one line per row.
+
+### Context menu
+
+Right-click any log row to access:
+
+- **Hide all before this line** — removes all earlier lines from view, useful for focusing on recent activity.
+- **Show all lines** — restores the full visible history.
+
+### Keyboard navigation
+
+- **PageDown** — scroll down one page
+- **PageUp** — scroll up one page
+- **Ctrl+PageDown** — jump to the bottom
+- **Ctrl+PageUp** — jump to the top
+
+These shortcuts work regardless of which element currently has keyboard focus.
+
+### Scroll position
+
+Each tab remembers whether you were scrolled to the bottom. If you were, new incoming lines automatically scroll the view to keep the latest content visible. If you scrolled up to review earlier lines, the position is preserved — both while the tab is active and when you switch away and return.
 
 ## Multi-lined log entries
 
@@ -112,6 +155,20 @@ In some cases too many tabs can fill a whole window of a tool. There is limitati
 - There is a topic on the [Egosoft forum](https://forum.egosoft.com/viewtopic.php?t=470624), related to this tool.
 
 ## Changelog
+
+### [1.0.0] - 2026-06-16
+
+- Added:
+  - Log content viewer rebuilt as a virtualized list — only visible rows are rendered, keeping the tool responsive with large log files.
+  - Search matches are now highlighted in yellow directly within the log content.
+  - Search bar (Ctrl+F) pre-populates from any text selected in the current row.
+  - Search history dropdown remembers recent searches for the current session.
+  - Horizontal scrollbar appears automatically when log lines exceed the visible width.
+  - Row selection: Shift+click and Ctrl+click select whole rows; triple-click selects a full row; Ctrl+C copies all selected rows as plain text.
+  - Context menu on log rows: hide all lines before the selected one, or restore them.
+  - Smart scroll following: each tab tracks whether you were at the bottom and only auto-scrolls on new content if you were; scroll position is preserved when switching tabs.
+  - Keyboard shortcuts PageUp / PageDown (scroll by page) and Ctrl+PageUp / Ctrl+PageDown (jump to top / bottom), working regardless of which control has focus.
+  - Option to switch log content font to monospace (Consolas) via the menu for better readability of structured log entries.
 
 ### [0.8.0] - 2025-07-20
 
