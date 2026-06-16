@@ -1,11 +1,10 @@
 using System;
 using System.ComponentModel;
-using System.Text.Json.Serialization;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Shapes;
 using MahApps.Metro.Controls;
 
 namespace X4LogWatcher
@@ -18,6 +17,8 @@ namespace X4LogWatcher
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private bool _disposed;
+    private bool _scrollDetectionSetUp;
+    private bool _shouldFollowBottom = true; // tracks whether the user was at the bottom last time the tab was visible
 
     private string _regexPattern = string.Empty;
     public string RegexPattern
@@ -70,10 +71,9 @@ namespace X4LogWatcher
         if (_isWatchingEnabled && FileChangedFlag)
         {
           FilePosition = 0;
-          IsInMultilineSequence = false; // Reset multiline state
+          IsInMultilineSequence = false;
           ClearContent();
           FileChangedFlag = false;
-          // The actual processing will be done by the MainWindow class
         }
       }
     }
@@ -119,12 +119,15 @@ namespace X4LogWatcher
         {
           _hasNewContent = value;
           OnPropertyChanged(nameof(HasNewContent));
-
-          // Update visual indication when this property changes
           UpdateNewContentIndicator();
         }
       }
     }
+
+    // Callbacks for driving the per-tab manual horizontal scrollbar.
+    // Wired by MainWindow.AddNewTab after the tab UI is fully constructed.
+    public Action<double>? SetHorizontalOffset { get; set; }
+    public Func<double>? GetHorizontalOffset { get; set; }
 
     // UI controls
     public MetroTabItem TabItem { get; }
@@ -132,7 +135,11 @@ namespace X4LogWatcher
     public NumericUpDown AfterLinesNumericUpDown { get; }
     public TextBox NameTextBox { get; }
     public CheckBox WatchingCheckBox { get; }
-    public TextBox ContentTextBox { get; }
+
+    // Disk-backed content storage and its virtual collection for the ListBox
+    public DiskBackedLineStore LineStore { get; }
+    public VirtualLineCollection LineCollection { get; }
+    public ListBox ContentListBox { get; }
 
     // Validation state
     public bool IsRegexValid { get; private set; }
@@ -146,7 +153,7 @@ namespace X4LogWatcher
       TextBox nameTextBox,
       TextBox regexTextBox,
       NumericUpDown afterLinesTextBox,
-      TextBox contentTextBox,
+      ListBox contentListBox,
       bool isAutoCreated = false
     )
     {
@@ -154,8 +161,13 @@ namespace X4LogWatcher
       RegexTextBox = regexTextBox;
       AfterLinesNumericUpDown = afterLinesTextBox;
       WatchingCheckBox = watchingCheckBox;
-      ContentTextBox = contentTextBox;
+      ContentListBox = contentListBox;
       NameTextBox = nameTextBox;
+
+      // Set up disk-backed storage and wire it to the ListBox
+      LineStore = new DiskBackedLineStore();
+      LineCollection = new VirtualLineCollection(LineStore);
+      ContentListBox.ItemsSource = LineCollection;
 
       TabName = NameTextBox.Text;
       RegexPattern = RegexTextBox.Text;
@@ -166,25 +178,17 @@ namespace X4LogWatcher
       AfterLines = afterLinesTextBox.Value.HasValue ? (int)afterLinesTextBox.Value : 0;
       AfterLinesCurrent = 0;
       IsAutoCreated = isAutoCreated;
-      IsInMultilineSequence = false; // Initialize multiline state
+      IsInMultilineSequence = false;
 
       // Wire up events
       RegexTextBox.TextChanged += RegexTextBox_TextChanged;
-
       NameTextBox.TextChanged += NameTextBox_TextChanged;
-
       AfterLinesNumericUpDown.ValueChanged += AfterLinesNumericUpDown_ValueChanged;
-
       WatchingCheckBox.Unchecked += WatchingCheckBox_Unchecked;
 
-      // Initialize regex
       UpdateRegex();
-
-      // Initialize tab header
       UpdateTabHeader();
-
-      // Set up scroll detection for smart auto-scrolling
-      SetupScrollDetection();
+      // SetupScrollDetection is called from outside via the ListBox.Loaded event
     }
 
     protected void OnPropertyChanged(string propertyName)
@@ -192,7 +196,7 @@ namespace X4LogWatcher
       PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
-    private void NameTextBox_TextChanged(object? sender, System.Windows.Controls.TextChangedEventArgs e)
+    private void NameTextBox_TextChanged(object? sender, TextChangedEventArgs e)
     {
       if (sender is TextBox nameTextBox)
       {
@@ -206,19 +210,14 @@ namespace X4LogWatcher
       if (sender is NumericUpDown afterLinesNumericUpDown)
       {
         if (afterLinesNumericUpDown.Value.HasValue)
-        {
           AfterLines = (int)(afterLinesNumericUpDown.Value ?? AfterLines);
-        }
         else
-        {
           afterLinesNumericUpDown.Value = AfterLines;
-        }
       }
     }
 
-    private void RegexTextBox_TextChanged(object? sender, System.Windows.Controls.TextChangedEventArgs e)
+    private void RegexTextBox_TextChanged(object? sender, TextChangedEventArgs e)
     {
-      // Update the regex pattern
       RegexPattern = RegexTextBox.Text;
     }
 
@@ -229,29 +228,23 @@ namespace X4LogWatcher
     {
       string displayText;
       if (!string.IsNullOrWhiteSpace(TabName))
-      {
         displayText = TabName;
-      }
       else
-      {
         displayText = RegexPattern;
-      }
 
-      // Add an indicator for auto-created tabs
       if (IsAutoCreated)
       {
-        displayText = "🔄 " + displayText; // Recycling symbol to indicate auto-created tab
-        TabItem.Foreground = Brushes.Navy; // Different color for auto tabs
+        displayText = "🔄 " + displayText;
+        TabItem.Foreground = Brushes.Navy;
       }
       else
       {
-        TabItem.Foreground = Brushes.Black; // Default color for normal tabs
+        TabItem.Foreground = Brushes.Black;
       }
 
-      // Add a prominent indicator for new content
       if (HasNewContent)
       {
-        displayText = "🔔 " + displayText; // Warning symbol to indicate attention needed
+        displayText = "🔔 " + displayText;
         HeaderedControlHelper.SetHeaderFontWeight(TabItem, FontWeights.Bold);
       }
       else
@@ -263,30 +256,12 @@ namespace X4LogWatcher
     }
 
     /// <summary>
-    /// Updates the compiled regex when pattern changes
+    /// Updates the compiled regex from the TextBox. Pass showError=true to show a
+    /// MessageBox when the pattern is invalid (e.g. on explicit Apply/Enable).
     /// </summary>
-    public bool UpdateRegex()
+    public bool UpdateRegex(bool showError = false)
     {
       RegexPattern = RegexTextBox.Text;
-
-      try
-      {
-        CompiledRegex = new Regex(RegexPattern);
-        IsRegexValid = true;
-        return true;
-      }
-      catch
-      {
-        IsRegexValid = false;
-        return false;
-      }
-    }
-
-    /// <summary>
-    /// Validates the current regex pattern
-    /// </summary>
-    public bool ValidateRegex()
-    {
       try
       {
         CompiledRegex = new Regex(RegexPattern);
@@ -295,7 +270,8 @@ namespace X4LogWatcher
       }
       catch (Exception ex)
       {
-        MessageBox.Show($"Invalid Regex: {ex.Message}", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        if (showError)
+          MessageBox.Show($"Invalid Regex: {ex.Message}", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Error);
         IsRegexValid = false;
         return false;
       }
@@ -307,44 +283,182 @@ namespace X4LogWatcher
     }
 
     /// <summary>
-    /// Appends matching lines from a log file to the content text box
+    /// Appends matching lines from a log file to the disk store and refreshes the ListBox.
     /// </summary>
     public void AppendContent(string text)
     {
       if (_disposed)
         return;
 
-      // Check if user was at the bottom before adding content
       bool wasAtBottom = IsUserAtBottom();
-      bool isTabFocused = IsTabCurrentlyFocused();
 
-      ContentTextBox.AppendText(text);
+      LineStore.AppendLines(SplitIntoLines(text));
+      LineCollection.NotifyReset();
 
-      // Only auto-scroll if user was already at the bottom or this tab is not currently focused
-      if (wasAtBottom || !isTabFocused)
+      if (wasAtBottom)
+        ScrollToEnd();
+      else if (!HasNewContent)
+        SetHasNewContent(true);
+    }
+
+    /// <summary>
+    /// Splits a multi-line string (built with AppendLine) into individual lines,
+    /// discarding the trailing empty element produced by the final newline.
+    /// </summary>
+    private static IEnumerable<string> SplitIntoLines(string text)
+    {
+      var parts = text.Split('\n');
+      for (int i = 0; i < parts.Length; i++)
       {
-        ContentTextBox.ScrollToEnd();
-      }
-      else
-      {
-        // User is scrolled up and tab is focused - indicate new content arrived
-        // This will make the tab header show the "new content" indicator
-        if (!HasNewContent)
-        {
-          SetHasNewContent(true);
-        }
+        var line = parts[i].TrimEnd('\r');
+        if (i < parts.Length - 1 || line.Length > 0)
+          yield return line;
       }
     }
 
     /// <summary>
-    /// Clears the content text box
+    /// Clears the disk store and resets the ListBox.
     /// </summary>
     public void ClearContent()
     {
       if (_disposed)
         return;
+      LineStore.Clear();
+      LineCollection.StartIndex = 0;
+      LineCollection.NotifyReset();
+    }
 
-      ContentTextBox.Clear();
+    /// <summary>
+    /// Hides all lines before <paramref name="absoluteLineIndex"/>. That line becomes
+    /// visible index 0.
+    /// </summary>
+    public void HideLinesBefore(int absoluteLineIndex)
+    {
+      LineCollection.StartIndex = absoluteLineIndex;
+      LineCollection.NotifyReset();
+    }
+
+    /// <summary>
+    /// Restores all previously hidden lines.
+    /// </summary>
+    public void ShowAllLines()
+    {
+      LineCollection.StartIndex = 0;
+      LineCollection.NotifyReset();
+    }
+
+    /// <summary>
+    /// Scrolls the ListBox to the last line.
+    /// </summary>
+    public void ScrollToEnd()
+    {
+      if (_disposed || ContentListBox == null)
+        return;
+      var scrollViewer = FindScrollViewer(ContentListBox);
+      scrollViewer?.ScrollToEnd();
+    }
+
+    /// <summary>
+    /// Selects and scrolls to a specific line index (used by search navigation).
+    /// When <paramref name="searchTerm"/> is provided, also scrolls horizontally so the
+    /// match is visible with a small amount of leading context.
+    /// </summary>
+    /// <param name="lineIndex">Absolute index into the disk store (as returned by Search).</param>
+    public void ScrollToLine(int lineIndex, string searchTerm = "", bool matchCase = false, FontFamily? fontFamily = null)
+    {
+      if (_disposed || ContentListBox == null || lineIndex < 0 || lineIndex >= LineStore.LineCount)
+        return;
+      int visibleIndex = lineIndex - LineCollection.StartIndex;
+      if (visibleIndex < 0 || visibleIndex >= LineCollection.Count)
+        return;
+
+      ContentListBox.SelectedIndex = visibleIndex;
+      // With CanContentScroll=true and VirtualizingStackPanel, VerticalOffset is item-based
+      var scrollViewer = FindScrollViewer(ContentListBox);
+      if (scrollViewer == null)
+        return;
+      scrollViewer.ScrollToVerticalOffset(visibleIndex);
+
+      if (!string.IsNullOrEmpty(searchTerm))
+      {
+        // Force the panel to measure the items now at visibleIndex so inner ScrollViewers
+        // have their ExtentWidth updated before the horizontal match offset is computed.
+        ContentListBox.UpdateLayout();
+        // Pass absolute lineIndex so ScrollToHorizontalMatch reads the correct line text.
+        ScrollToHorizontalMatch(scrollViewer, lineIndex, searchTerm, matchCase, fontFamily);
+      }
+      else
+      {
+        SetHorizontalOffset?.Invoke(0);
+      }
+
+      ContentListBox.Focus();
+    }
+
+    private void ScrollToHorizontalMatch(
+      ScrollViewer scrollViewer,
+      int lineIndex,
+      string searchTerm,
+      bool matchCase,
+      FontFamily? fontFamily
+    )
+    {
+      string lineText = LineStore.GetLine(lineIndex);
+      var cmp = matchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+      int matchIndex = lineText.IndexOf(searchTerm, cmp);
+      if (matchIndex < 0)
+        return;
+
+      // Match is at the very start — only scroll if we're already scrolled right past it
+      if (matchIndex == 0)
+      {
+        if ((GetHorizontalOffset?.Invoke() ?? 0) > 0)
+          SetHorizontalOffset?.Invoke(0);
+        return;
+      }
+
+      try
+      {
+        string textBefore = lineText[..matchIndex];
+        var typeface = new Typeface(fontFamily ?? ContentListBox.FontFamily, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+        double fontSize = ContentListBox.FontSize;
+        if (double.IsNaN(fontSize) || fontSize <= 0)
+          fontSize = SystemFonts.MessageFontSize;
+        double dpi = VisualTreeHelper.GetDpi(ContentListBox).PixelsPerDip;
+        var formatted = new FormattedText(
+          textBefore,
+          CultureInfo.CurrentCulture,
+          FlowDirection.LeftToRight,
+          typeface,
+          fontSize,
+          Brushes.Black,
+          dpi
+        );
+
+        // +4 px for the combined ListBoxItem + TextBlock padding
+        double matchPixelX = formatted.Width + 4.0;
+        double viewLeft = GetHorizontalOffset?.Invoke() ?? 0;
+        double viewRight = viewLeft + scrollViewer.ViewportWidth;
+
+        // Don't scroll if the match start is already visible with at least 50 px of right margin
+        if (matchPixelX >= viewLeft && matchPixelX <= viewRight - 50)
+          return;
+
+        // Scroll just enough to bring the match into view with ~50 px of leading context
+        SetHorizontalOffset?.Invoke(Math.Max(0, matchPixelX - 50));
+      }
+      catch { }
+    }
+
+    /// <summary>
+    /// Get estimated memory usage of this tab's content (page cache only; bulk is on disk).
+    /// </summary>
+    public long GetEstimatedMemoryUsage()
+    {
+      if (_disposed)
+        return 0;
+      // Only the page cache lives in memory; rough estimate: 80 bytes per cached line
+      return Math.Min(LineStore.LineCount, 15 * 200) * 80L;
     }
 
     /// <summary>
@@ -353,68 +467,33 @@ namespace X4LogWatcher
     public void SetHasNewContent(bool hasNew)
     {
       HasNewContent = hasNew;
-      // UpdateTabHeader is called by HasNewContent property setter via UpdateNewContentIndicator
     }
 
-    /// <summary>
-    /// Updates the visual indicator for new content
-    /// </summary>
     private void UpdateNewContentIndicator()
     {
-      // Just update the tab header text which includes the indicator when HasNewContent is true
       UpdateTabHeader();
     }
 
     /// <summary>
-    /// Get estimated memory usage of this tab's content
+    /// Checks if the user is currently scrolled to the bottom of the ListBox
     /// </summary>
-    /// <returns>Estimated memory usage in bytes</returns>
-    public long GetEstimatedMemoryUsage()
-    {
-      if (_disposed)
-        return 0;
-
-      try
-      {
-        // Estimate memory usage: string content + UI overhead
-        var textLength = ContentTextBox?.Text?.Length ?? 0;
-        return textLength * 2; // Unicode characters are 2 bytes each
-      }
-      catch
-      {
-        return 0;
-      }
-    }
-
-    /// <summary>
-    /// Checks if the user is currently scrolled to the bottom of the TextBox
-    /// </summary>
-    /// <returns>True if at bottom, false if scrolled up</returns>
     private bool IsUserAtBottom()
     {
-      if (_disposed || ContentTextBox == null)
-        return true; // Default to true to maintain existing behavior
-
+      if (_disposed || ContentListBox == null)
+        return _shouldFollowBottom;
       try
       {
-        // Find the ScrollViewer inside the TextBox
-        var scrollViewer = FindScrollViewer(ContentTextBox);
+        var scrollViewer = FindScrollViewer(ContentListBox);
         if (scrollViewer != null)
         {
-          var verticalOffset = scrollViewer.VerticalOffset;
-          var scrollableHeight = scrollViewer.ScrollableHeight;
-
-          // Consider "at bottom" if within a small tolerance (a few pixels)
           const double tolerance = 5.0;
-          return Math.Abs(verticalOffset - scrollableHeight) <= tolerance;
+          return Math.Abs(scrollViewer.VerticalOffset - scrollViewer.ScrollableHeight) <= tolerance;
         }
-
-        // Fallback: check if caret is at the end
-        return ContentTextBox.CaretIndex == ContentTextBox.Text.Length;
+        return _shouldFollowBottom;
       }
       catch
       {
-        return true; // Default to true if we can't determine scroll position
+        return _shouldFollowBottom;
       }
     }
 
@@ -425,81 +504,37 @@ namespace X4LogWatcher
     {
       if (parent == null)
         return null;
-
       try
       {
         for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
         {
           var child = VisualTreeHelper.GetChild(parent, i);
-
-          if (child is ScrollViewer scrollViewer)
-            return scrollViewer;
-
+          if (child is ScrollViewer sv)
+            return sv;
           var result = FindScrollViewer(child);
           if (result != null)
             return result;
         }
       }
-      catch
-      {
-        // Ignore visual tree access errors
-      }
-
+      catch { }
       return null;
     }
 
     /// <summary>
-    /// Checks if this tab is currently focused/selected
-    /// </summary>
-    /// <returns>True if this tab is currently active</returns>
-    private bool IsTabCurrentlyFocused()
-    {
-      if (_disposed || TabItem?.Parent == null)
-        return false;
-
-      try
-      {
-        // Check if this tab is the selected item in its parent TabControl
-        if (TabItem.Parent is TabControl tabControl)
-        {
-          return tabControl.SelectedItem == TabItem;
-        }
-
-        // Check if this tab has keyboard focus
-        return TabItem.IsKeyboardFocused || ContentTextBox?.IsKeyboardFocused == true;
-      }
-      catch
-      {
-        return false;
-      }
-    }
-
-    /// <summary>
-    /// Call this method when the user scrolls back to the bottom to clear the new content indicator
-    /// </summary>
-    public void OnUserScrolledToBottom()
-    {
-      if (HasNewContent)
-      {
-        SetHasNewContent(false);
-      }
-    }
-
-    /// <summary>
-    /// Subscribe to TextBox scroll events to detect when user scrolls back to bottom
-    /// This should be called from MainWindow to wire up the scroll detection
+    /// Subscribe to ListBox scroll events to detect when user scrolls back to bottom.
+    /// Must be called after the ListBox has been loaded into the visual tree.
     /// </summary>
     public void SetupScrollDetection()
     {
-      if (_disposed || ContentTextBox == null)
+      if (_disposed || ContentListBox == null || _scrollDetectionSetUp)
         return;
-
       try
       {
-        var scrollViewer = FindScrollViewer(ContentTextBox);
+        var scrollViewer = FindScrollViewer(ContentListBox);
         if (scrollViewer != null)
         {
           scrollViewer.ScrollChanged += OnScrollChanged;
+          _scrollDetectionSetUp = true;
         }
       }
       catch (Exception ex)
@@ -508,21 +543,15 @@ namespace X4LogWatcher
       }
     }
 
-    /// <summary>
-    /// Handle scroll events to detect when user returns to bottom
-    /// </summary>
     private void OnScrollChanged(object sender, ScrollChangedEventArgs e)
     {
       if (_disposed)
         return;
-
       try
       {
-        // If user scrolled to bottom and we have new content indicator, clear it
-        if (HasNewContent && IsUserAtBottom())
-        {
+        _shouldFollowBottom = IsUserAtBottom();
+        if (HasNewContent && _shouldFollowBottom)
           SetHasNewContent(false);
-        }
       }
       catch (Exception ex)
       {
@@ -530,74 +559,53 @@ namespace X4LogWatcher
       }
     }
 
+    /// <summary>
+    /// Called when a tab becomes visible again. Scrolls to end if the user was at the
+    /// bottom when the tab was last active, preserving position otherwise.
+    /// </summary>
+    public void RestoreScrollIfFollowing()
+    {
+      if (_shouldFollowBottom)
+        ScrollToEnd();
+    }
+
     #region IDisposable Implementation
 
-    /// <summary>
-    /// Dispose of resources and unsubscribe from event handlers
-    /// </summary>
     public void Dispose()
     {
       Dispose(true);
       GC.SuppressFinalize(this);
     }
 
-    /// <summary>
-    /// Protected dispose method
-    /// </summary>
-    /// <param name="disposing">True if disposing from Dispose() method, false if from finalizer</param>
     protected virtual void Dispose(bool disposing)
     {
       if (!_disposed && disposing)
       {
         try
         {
-          // Unsubscribe from all event handlers to prevent memory leaks
           if (RegexTextBox != null)
-          {
             RegexTextBox.TextChanged -= RegexTextBox_TextChanged;
-          }
-
           if (NameTextBox != null)
-          {
             NameTextBox.TextChanged -= NameTextBox_TextChanged;
-          }
-
           if (AfterLinesNumericUpDown != null)
-          {
             AfterLinesNumericUpDown.ValueChanged -= AfterLinesNumericUpDown_ValueChanged;
-          }
-
           if (WatchingCheckBox != null)
-          {
             WatchingCheckBox.Unchecked -= WatchingCheckBox_Unchecked;
-          }
 
-          // Clear property change event handlers
           PropertyChanged = null;
 
-          // Unsubscribe from scroll events
           try
           {
-            var scrollViewer = FindScrollViewer(ContentTextBox);
+            var scrollViewer = FindScrollViewer(ContentListBox);
             if (scrollViewer != null)
-            {
               scrollViewer.ScrollChanged -= OnScrollChanged;
-            }
           }
-          catch
-          {
-            // Ignore errors during disposal
-          }
+          catch { }
 
-          // Force garbage collection of large content if present
-          if (ContentTextBox != null && ContentTextBox.Text.Length > 10_000_000) // 10MB threshold
-          {
-            ContentTextBox.Clear();
-          }
+          LineStore.Dispose();
         }
         catch (Exception ex)
         {
-          // Log but don't throw during disposal
           System.Diagnostics.Debug.WriteLine($"Error during TabInfo disposal: {ex.Message}");
         }
 
@@ -605,9 +613,6 @@ namespace X4LogWatcher
       }
     }
 
-    /// <summary>
-    /// Finalizer to ensure disposal if Dispose() wasn't called
-    /// </summary>
     ~TabInfo()
     {
       Dispose(false);

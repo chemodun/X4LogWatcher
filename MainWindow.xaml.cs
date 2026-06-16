@@ -187,6 +187,10 @@ namespace X4LogWatcher
     private readonly List<int> searchResultPositions = [];
     private TabInfo? currentSearchTab;
 
+    // Row-selection anchor for Shift+click range selection (set on a plain click).
+    private ListBox? _rowAnchorListBox;
+    private int _rowAnchorIndex = -1;
+
     private bool _isProcessing;
 
     public MainWindow()
@@ -241,14 +245,47 @@ namespace X4LogWatcher
       }
     }
 
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+      base.OnPreviewKeyDown(e);
+
+      if (e.Key == Key.PageUp || e.Key == Key.PageDown)
+      {
+        var activeTab = tabs.FirstOrDefault(t => t.TabItem == tabControl.SelectedItem);
+        var sv = activeTab?.ContentListBox != null ? FindVisualDescendant<ScrollViewer>(activeTab.ContentListBox) : null;
+        if (sv != null)
+        {
+          if (Keyboard.Modifiers == ModifierKeys.None)
+          {
+            if (e.Key == Key.PageDown)
+              sv.PageDown();
+            else
+              sv.PageUp();
+            e.Handled = true;
+          }
+          else if (Keyboard.Modifiers == ModifierKeys.Control)
+          {
+            if (e.Key == Key.PageDown)
+              sv.ScrollToBottom();
+            else
+              sv.ScrollToTop();
+            e.Handled = true;
+          }
+        }
+      }
+    }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
       base.OnKeyDown(e);
 
-      // Handle Ctrl+F to open search
+      // Handle Ctrl+F to open search, pre-filled with any partial text selection in a row.
       if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
       {
-        ShowFindPanel();
+        string? selectedText = null;
+        if (Keyboard.FocusedElement is RichTextBox focRtb && !focRtb.Selection.IsEmpty)
+          selectedText = focRtb.Selection.Text;
+        ShowFindPanel(selectedText);
         e.Handled = true;
       }
 
@@ -459,6 +496,7 @@ namespace X4LogWatcher
       mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(35) }); // First control row
       mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(35) }); // Second control row
       mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // Content row
+      mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Horizontal scrollbar row
 
       mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Auto) }); // Content column
       mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Auto) }); // Content column
@@ -566,29 +604,210 @@ namespace X4LogWatcher
       Grid.SetColumnSpan(contentPanel, 6);
       mainGrid.Children.Add(contentPanel);
 
-      // Add TextBox for content
-      var txtContent = new TextBox
+      // Add virtualized ListBox for content
+      var contentListBox = new ListBox
       {
-        AcceptsReturn = true,
-        IsReadOnly = true,
-        VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-        HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-        FontFamily = AppConfig.UseMonospaceFont ? new FontFamily("Consolas") : SystemFonts.MessageFontFamily,
+        SelectionMode = SelectionMode.Extended,
+        ItemTemplate = CreateLineDataTemplate(),
+        BorderThickness = new Thickness(0),
       };
+      VirtualizingPanel.SetIsVirtualizing(contentListBox, true);
+      VirtualizingPanel.SetVirtualizationMode(contentListBox, VirtualizationMode.Recycling);
+      // ScrollUnit=Pixel is required for horizontal scrolling: in item-based mode (the default)
+      // the VirtualizingStackPanel always reports ExtentWidth == ViewportWidth, making horizontal
+      // scrolling impossible regardless of content width.  Pixel mode correctly tracks the
+      // widest visible child and reports it as ExtentWidth.
+      VirtualizingPanel.SetScrollUnit(contentListBox, ScrollUnit.Pixel);
+      ScrollViewer.SetHorizontalScrollBarVisibility(contentListBox, ScrollBarVisibility.Disabled);
+      ScrollViewer.SetVerticalScrollBarVisibility(contentListBox, ScrollBarVisibility.Auto);
+      ScrollViewer.SetCanContentScroll(contentListBox, true);
 
-      // Add Enter key handling for search navigation when content box has focus
-      txtContent.KeyDown += ContentBox_KeyDown;
+      // Build an explicit ListBoxItem ControlTemplate: a zero-MinHeight Border wrapping
+      // a ContentPresenter, with an IsSelected trigger for the highlight background.
+      // OverridesDefaultStyle=true bypasses MahApps's implicit style, but then WPF cannot
+      // find a template from the theme dictionary, so we must supply one ourselves.
+      var liCpFactory = new FrameworkElementFactory(typeof(ContentPresenter));
+      liCpFactory.SetValue(FrameworkElement.SnapsToDevicePixelsProperty, true);
 
-      contentPanel.Child = txtContent;
+      var liBdFactory = new FrameworkElementFactory(typeof(Border));
+      liBdFactory.Name = "Bd";
+      liBdFactory.SetValue(Border.BackgroundProperty, Brushes.Transparent);
+      liBdFactory.AppendChild(liCpFactory);
+
+      var liTemplate = new ControlTemplate(typeof(ListBoxItem));
+      liTemplate.VisualTree = liBdFactory;
+
+      // Hover: subtle tint (hover trigger before selected so selected wins when both active)
+      var liHoverBrush = new SolidColorBrush(Color.FromArgb(30, 0, 120, 215));
+      liHoverBrush.Freeze();
+      var liHoverTrig = new Trigger { Property = ListBoxItem.IsMouseOverProperty, Value = true };
+      liHoverTrig.Setters.Add(new Setter(Border.BackgroundProperty, liHoverBrush) { TargetName = "Bd" });
+      liTemplate.Triggers.Add(liHoverTrig);
+
+      // Selected: highlight background + foreground so RichTextBox text inherits white
+      var liSelTrig = new Trigger { Property = ListBoxItem.IsSelectedProperty, Value = true };
+      liSelTrig.Setters.Add(new Setter(Border.BackgroundProperty, SystemColors.HighlightBrush) { TargetName = "Bd" });
+      liSelTrig.Setters.Add(new Setter(Control.ForegroundProperty, SystemColors.HighlightTextBrush));
+      liTemplate.Triggers.Add(liSelTrig);
+
+      var itemStyle = new Style(typeof(ListBoxItem));
+      itemStyle.Setters.Add(new Setter(FrameworkElement.OverridesDefaultStyleProperty, true));
+      itemStyle.Setters.Add(new Setter(FrameworkElement.MinHeightProperty, 0.0));
+      itemStyle.Setters.Add(new Setter(ListBoxItem.MarginProperty, new Thickness(0)));
+      itemStyle.Setters.Add(new Setter(ListBoxItem.TemplateProperty, liTemplate));
+      contentListBox.ItemContainerStyle = itemStyle;
+
+      contentListBox.PreviewKeyDown += ContentBox_PreviewKeyDown;
+
+      contentPanel.Child = contentListBox;
+
+      // Manual horizontal scrollbar: the outer ListBox ScrollViewer never sees a true
+      // horizontal extent from VirtualizingStackPanel (ExtentWidth == ViewportWidth always).
+      // Each row's inner RichTextBox PART_ContentHost ScrollViewer has ExtentWidth equal to
+      // the FormattedText-measured PageWidth set in HighlightRichTextBox.Rebuild.
+      // This ScrollBar drives all visible inner ScrollViewers directly.
+      var hScrollBar = new System.Windows.Controls.Primitives.ScrollBar
+      {
+        Orientation = Orientation.Horizontal,
+        SmallChange = 20,
+        LargeChange = 200,
+        Minimum = 0,
+        Maximum = 0,
+        ViewportSize = 0,
+        IsEnabled = false,
+      };
+      Grid.SetRow(hScrollBar, 3);
+      Grid.SetColumnSpan(hScrollBar, 6);
+      mainGrid.Children.Add(hScrollBar);
 
       // Create and store TabInfo object
-      var tabInfo = new TabInfo(tabItem, chkEnable, txtName, txtRegex, numAfterLines, txtContent, isAutoCreated);
+      var tabInfo = new TabInfo(tabItem, chkEnable, txtName, txtRegex, numAfterLines, contentListBox, isAutoCreated);
+
+      // Max inner-SV ExtentWidth ever seen in this tab (monotonically increasing so the scrollbar
+      // Maximum never shrinks while the user is scrolled right — virtualization hides older rows).
+      double[] maxExtentHolder = { 0.0 };
+
+      void UpdateHScrollBar()
+      {
+        double viewportW = 0;
+        for (int i = 0; i < contentListBox.Items.Count; i++)
+        {
+          if (contentListBox.ItemContainerGenerator.ContainerFromIndex(i) is not ListBoxItem lbi)
+            continue;
+          var innerSv = FindVisualDescendant<ScrollViewer>(lbi);
+          var rtb = FindVisualDescendant<RichTextBox>(lbi);
+          if (innerSv == null || rtb == null)
+            continue;
+          // ContentWidth is the FormattedText-measured line width stored by HighlightRichTextBox.
+          // PageWidth stays at 50000 to prevent wrapping, so innerSv.ExtentWidth would always be
+          // 50000 and useless as a scrollbar extent.
+          double cw = HighlightRichTextBox.GetContentWidth(rtb);
+          if (cw > maxExtentHolder[0])
+            maxExtentHolder[0] = cw;
+          viewportW = innerSv.ViewportWidth;
+        }
+        if (viewportW <= 0)
+          return;
+        double scrollable = Math.Max(0, maxExtentHolder[0] - viewportW);
+        hScrollBar.ViewportSize = viewportW;
+        hScrollBar.LargeChange = viewportW;
+        hScrollBar.Maximum = scrollable;
+        hScrollBar.IsEnabled = scrollable > 0;
+        if (hScrollBar.Value > scrollable)
+          hScrollBar.Value = scrollable;
+      }
+
+      void SyncInnerViewers(double offset)
+      {
+        for (int i = 0; i < contentListBox.Items.Count; i++)
+        {
+          if (contentListBox.ItemContainerGenerator.ContainerFromIndex(i) is not ListBoxItem lbi)
+            continue;
+          var innerSv = FindVisualDescendant<ScrollViewer>(lbi);
+          innerSv?.ScrollToHorizontalOffset(offset);
+        }
+      }
+
+      hScrollBar.ValueChanged += (s, e) => SyncInnerViewers(hScrollBar.Value);
+
+      // SetupScrollDetection needs the visual tree to be ready
+      contentListBox.Loaded += (_, _) =>
+      {
+        tabInfo.SetupScrollDetection();
+        var outerSv = FindVisualDescendant<ScrollViewer>(contentListBox);
+        if (outerSv != null)
+          outerSv.ScrollChanged += (s, e) =>
+          {
+            UpdateHScrollBar();
+            SyncInnerViewers(hScrollBar.Value);
+          };
+        tabInfo.RestoreScrollIfFollowing();
+      };
       tabs.Add(tabInfo);
+
+      tabInfo.SetHorizontalOffset = v =>
+      {
+        double clamped = Math.Max(0, Math.Min(v, hScrollBar.Maximum));
+        hScrollBar.Value = clamped;
+        SyncInnerViewers(clamped);
+      };
+      tabInfo.GetHorizontalOffset = () => hScrollBar.Value;
+
+      // Row context menu: "Hide all before this line" / "Show all lines"
+      var menuHideBefore = new MenuItem { Header = "Hide all before this line" };
+      var menuShowAll = new MenuItem { Header = "Show all lines", IsEnabled = false };
+      var rowContextMenu = new ContextMenu();
+      rowContextMenu.Items.Add(menuHideBefore);
+      rowContextMenu.Items.Add(new Separator());
+      rowContextMenu.Items.Add(menuShowAll);
+      // Row selection: a plain click + drag does partial text selection inside one line
+      // (native RichTextBox), while Shift+click / Ctrl+click select whole rows.  The latter is
+      // driven by RowRichTextBox_PreviewMouseLeftButtonDown (attached in CreateLineDataTemplate)
+      // which manipulates this ListBox's SelectedItems directly.
+
+      // RichTextBox has a built-in Cut/Copy/Paste context menu that intercepts a normal
+      // right-click before the ListBox ContextMenu can open.  PreviewMouseRightButtonUp is
+      // a tunneling event that reaches the ListBox before the RichTextBox sees MouseRightButtonUp,
+      // so we open our custom menu here and mark the event handled to suppress the built-in one.
+      int rightClickedVisibleIndex = -1;
+      contentListBox.PreviewMouseRightButtonUp += (s, e) =>
+      {
+        var pos = e.GetPosition(contentListBox);
+        var hit = VisualTreeHelper.HitTest(contentListBox, pos);
+        var lbi = FindVisualAncestor<ListBoxItem>(hit?.VisualHit);
+        rightClickedVisibleIndex = lbi != null ? contentListBox.ItemContainerGenerator.IndexFromContainer(lbi) : -1;
+
+        int hiddenCount = tabInfo.LineCollection.StartIndex;
+        menuHideBefore.IsEnabled = rightClickedVisibleIndex > 0;
+        menuShowAll.IsEnabled = hiddenCount > 0;
+        menuShowAll.Header = hiddenCount > 0 ? $"Show all lines ({hiddenCount} hidden)" : "Show all lines";
+
+        rowContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+        rowContextMenu.IsOpen = true;
+        e.Handled = true;
+      };
+
+      menuHideBefore.Click += (s, e) =>
+      {
+        if (rightClickedVisibleIndex > 0)
+        {
+          tabInfo.HideLinesBefore(rightClickedVisibleIndex + tabInfo.LineCollection.StartIndex);
+          if (currentSearchTab == tabInfo && !string.IsNullOrEmpty(ActiveSearchTerm))
+            PerformSearch();
+        }
+      };
+
+      menuShowAll.Click += (s, e) =>
+      {
+        tabInfo.ShowAllLines();
+        if (currentSearchTab == tabInfo && !string.IsNullOrEmpty(ActiveSearchTerm))
+          PerformSearch();
+      };
 
       // Set up Apply button click handler using the TabInfo object
       btnApply.Click += (s, e) =>
       {
-        if (tabInfo.ValidateRegex() && tabInfo.IsWatchingEnabled && _currentLogFile != null)
+        if (tabInfo.UpdateRegex(showError: true) && tabInfo.IsWatchingEnabled && _currentLogFile != null)
         {
           // Reset file position to process from the beginning with new regex
           tabInfo.UpdateTabHeader();
@@ -604,7 +823,7 @@ namespace X4LogWatcher
       {
         if (s is CheckBox checkBox)
         {
-          if (tabInfo.ValidateRegex())
+          if (tabInfo.UpdateRegex(showError: true))
           {
             tabInfo.IsWatchingEnabled = true;
             tabInfo.UpdateTabHeader();
@@ -645,21 +864,198 @@ namespace X4LogWatcher
       }
     }
 
-    private void ContentBox_KeyDown(object sender, KeyEventArgs e)
+    private void ContentBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+      // Enter: navigate search results when the find panel is visible
       if (e.Key == Key.Enter && findPanel.Visibility == Visibility.Visible)
       {
-        // When Enter is pressed in content box and search panel is visible,
-        // use the same behavior as F3 to find the next occurrence
         if (Keyboard.Modifiers == ModifierKeys.Shift)
-        {
           FindPrevious();
-        }
         else
-        {
           FindNext();
-        }
         e.Handled = true;
+        return;
+      }
+      if (e.Key == Key.C && Keyboard.Modifiers == ModifierKeys.Control)
+      {
+        var focused = Keyboard.FocusedElement;
+        if (sender is ListBox lb)
+        {
+          if (lb.SelectedItems.Count > 1)
+          {
+            // Multi-row: copy all selected lines as full lines in display order.
+            // LineItem identity is its absolute index, so ordering by it gives display order
+            // and duplicate lines are handled naturally.
+            var lines = lb.SelectedItems.Cast<LineItem>().OrderBy(li => li.AbsoluteIndex).Select(li => li.Text);
+            Clipboard.SetDataObject(string.Join(Environment.NewLine, lines), true);
+            e.Handled = true;
+            return;
+          }
+
+          // Partial text selection inside a single row: copy it explicitly.
+          var selRtb = (focused as RichTextBox) ?? FindRichTextBoxWithSelection(lb);
+          if (selRtb != null && !selRtb.Selection.IsEmpty)
+          {
+            Clipboard.SetDataObject(selRtb.Selection.Text, true);
+            e.Handled = true;
+            return;
+          }
+
+          // Single row, no partial selection: copy the full line.
+          if (lb.SelectedItem is LineItem line)
+          {
+            Clipboard.SetDataObject(line.Text, true);
+            e.Handled = true;
+          }
+        }
+      }
+    }
+
+    // Attached to every row's RichTextBox.  A plain click just records the anchor row and lets
+    // the RichTextBox select text within the line.  Shift+click selects the whole-row range from
+    // the anchor; Ctrl+click toggles a single row.  For modifier clicks we mark the event handled
+    // so the RichTextBox's TextEditor (which acts on the bubbling MouseDown) never starts a
+    // single-line text selection that would fight the multi-row selection.
+    private void RowRichTextBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+      if (sender is not RichTextBox rtb)
+        return;
+      var lb = FindVisualAncestor<ListBox>(rtb);
+      var lbi = FindVisualAncestor<ListBoxItem>(rtb);
+      if (lb == null || lbi == null)
+        return;
+      int index = lb.ItemContainerGenerator.IndexFromContainer(lbi);
+      if (index < 0)
+        return;
+
+      bool shift = (Keyboard.Modifiers & ModifierKeys.Shift) != 0;
+      bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) != 0;
+
+      if (!shift && !ctrl)
+      {
+        if (e.ClickCount >= 3)
+        {
+          // Triple-click (a "second" double-click in quick succession): select the WHOLE line
+          // as a row and make it the anchor, so Ctrl+C copies the full line.  Suppress the
+          // RichTextBox's native paragraph selection and drop every partial text selection.
+          e.Handled = true;
+          ClearRowTextSelections(lb, null);
+          lb.SelectedIndex = index;
+          _rowAnchorListBox = lb;
+          _rowAnchorIndex = index;
+          lb.Focus();
+          return;
+        }
+
+        // Single click: clear any existing row selection (so a previous multi-line selection is
+        // removed) AND clear the anchor, but do NOT record a new anchor or highlight the row.
+        // Also drop partial text selections in OTHER rows so only the line being clicked can hold
+        // a selection.  The RichTextBox keeps the click so it can place the caret and a drag
+        // selects partial text.  Double click (ClickCount==2) is left untouched so the
+        // RichTextBox selects the word.
+        if (e.ClickCount == 1)
+        {
+          lb.SelectedIndex = -1;
+          _rowAnchorListBox = null;
+          _rowAnchorIndex = -1;
+          ClearRowTextSelections(lb, rtb);
+        }
+        return;
+      }
+
+      // Modifier click: drive row selection ourselves and suppress text selection.
+      e.Handled = true;
+      // Drop every partial text selection — a row selection replaces them.
+      ClearRowTextSelections(lb, null);
+
+      if (ctrl && !shift)
+      {
+        var item = lb.Items[index];
+        if (lb.SelectedItems.Contains(item))
+          lb.SelectedItems.Remove(item);
+        else
+          lb.SelectedItems.Add(item);
+        _rowAnchorListBox = lb;
+        _rowAnchorIndex = index;
+      }
+      else // Shift (optionally with Ctrl): select the range from the anchor to here.
+      {
+        bool hasAnchor = _rowAnchorListBox == lb && _rowAnchorIndex >= 0;
+        int anchor = hasAnchor ? _rowAnchorIndex : index;
+        if (!hasAnchor)
+        {
+          // No anchor yet — this Shift+click establishes one at the clicked line so a
+          // following Shift+click extends the range from here.
+          _rowAnchorListBox = lb;
+          _rowAnchorIndex = index;
+        }
+        lb.SelectedItems.Clear();
+        int lo = Math.Min(anchor, index);
+        int hi = Math.Max(anchor, index);
+        for (int i = lo; i <= hi; i++)
+          lb.SelectedItems.Add(lb.Items[i]);
+      }
+
+      lb.Focus(); // ensure Ctrl+C reaches the ListBox's PreviewKeyDown handler
+    }
+
+    private static T? FindVisualAncestor<T>(DependencyObject? element)
+      where T : DependencyObject
+    {
+      var node = element;
+      while (node != null)
+      {
+        if (node is T result)
+          return result;
+        node = VisualTreeHelper.GetParent(node);
+      }
+      return null;
+    }
+
+    private static T? FindVisualDescendant<T>(DependencyObject parent)
+      where T : DependencyObject
+    {
+      int count = VisualTreeHelper.GetChildrenCount(parent);
+      for (int i = 0; i < count; i++)
+      {
+        var child = VisualTreeHelper.GetChild(parent, i);
+        if (child is T result)
+          return result;
+        var found = FindVisualDescendant<T>(child);
+        if (found != null)
+          return found;
+      }
+      return null;
+    }
+
+    // Scans visible ListBoxItems for the first RichTextBox with a non-empty text selection.
+    private static RichTextBox? FindRichTextBoxWithSelection(ListBox? listBox)
+    {
+      if (listBox == null)
+        return null;
+      for (int i = 0; i < listBox.Items.Count; i++)
+      {
+        if (listBox.ItemContainerGenerator.ContainerFromIndex(i) is not ListBoxItem item)
+          continue;
+        var rtb = FindVisualDescendant<RichTextBox>(item);
+        if (rtb != null && !rtb.Selection.IsEmpty)
+          return rtb;
+      }
+      return null;
+    }
+
+    // Collapses the partial text selection in every realized row RichTextBox except <paramref
+    // name="keep"/>.  Only visible rows are realized, and off-screen rows can't hold a selection
+    // (their RichTextBox is recycled), so this clears all stray partial selections.
+    private static void ClearRowTextSelections(ListBox listBox, RichTextBox? keep)
+    {
+      for (int i = 0; i < listBox.Items.Count; i++)
+      {
+        if (listBox.ItemContainerGenerator.ContainerFromIndex(i) is not ListBoxItem item)
+          continue;
+        var rtb = FindVisualDescendant<RichTextBox>(item);
+        if (rtb != null && rtb != keep && !rtb.Selection.IsEmpty)
+          rtb.Selection.Select(rtb.Document.ContentStart, rtb.Document.ContentStart);
       }
     }
 
@@ -1574,21 +1970,19 @@ namespace X4LogWatcher
     }
 
     // Find functionality methods
-    private void ShowFindPanel()
+    private void ShowFindPanel(string? populateWith = null)
     {
-      // Get active tab
       if (tabControl.SelectedItem is MetroTabItem selectedTabItem && selectedTabItem != addTabButton)
       {
-        // Show the find panel
         findPanel.Visibility = Visibility.Visible;
-
-        // Clear previous search results
         searchResultPositions.Clear();
         currentSearchPosition = -1;
 
-        // Focus the search text box
+        if (!string.IsNullOrEmpty(populateWith))
+          txtFindText.Text = populateWith;
+
         txtFindText.Focus();
-        txtFindText.SelectAll();
+        FindVisualDescendant<TextBox>(txtFindText)?.SelectAll();
       }
     }
 
@@ -1599,9 +1993,23 @@ namespace X4LogWatcher
       ClearSearchStatus();
     }
 
+    private void TxtFindText_Loaded(object sender, RoutedEventArgs e)
+    {
+      txtFindText.ItemsSource = AppConfig.SearchHistory;
+      // Wire TextChanged from the inner editable TextBox (ComboBox has no TextChanged of its own).
+      var innerTb = FindVisualDescendant<TextBox>(txtFindText);
+      if (innerTb != null)
+        innerTb.TextChanged += TxtFindText_TextChanged;
+      // Auto-search when the user picks an item from the history dropdown.
+      txtFindText.SelectionChanged += (s, ev) =>
+      {
+        if (txtFindText.SelectedItem is string)
+          PerformSearch();
+      };
+    }
+
     private void TxtFindText_TextChanged(object sender, TextChangedEventArgs e)
     {
-      // No longer perform immediate search on text change
       if (string.IsNullOrEmpty(txtFindText.Text))
       {
         ClearSearchHighlights();
@@ -1672,23 +2080,23 @@ namespace X4LogWatcher
           searchResultPositions.Clear();
           currentSearchPosition = -1;
 
-          // Get the text and search term
-          string content = tabInfo.ContentTextBox.Text;
           string searchTerm = txtFindText.Text;
+          bool matchCase = chkMatchCase.IsChecked == true;
 
-          // Get comparison type based on match case checkbox
-          StringComparison comparison = chkMatchCase.IsChecked == true ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+          AppConfig.AddSearchTerm(searchTerm);
+          txtFindText.ItemsSource = null;
+          txtFindText.ItemsSource = AppConfig.SearchHistory;
+          txtFindText.Text = searchTerm;
 
-          // Find all occurrences
-          int index = 0;
-          while ((index = content.IndexOf(searchTerm, index, comparison)) >= 0)
-          {
-            // Add position to results
-            searchResultPositions.Add(index);
+          // Search across disk-backed line store; keep only lines that are currently visible
+          // (i.e. at or after StartIndex). Results are stored as absolute line indices so
+          // ScrollToLine can convert them to visible indices itself.
+          int visStart = tabInfo.LineCollection.StartIndex;
+          searchResultPositions.AddRange(tabInfo.LineStore.Search(searchTerm, matchCase).Where(i => i >= visStart));
 
-            // Move index forward
-            index += searchTerm.Length;
-          }
+          // Update highlight properties so every visible TextBlock marks its matches
+          SearchMatchCase = matchCase;
+          ActiveSearchTerm = searchTerm;
 
           // Set initial position and highlight first result
           if (searchResultPositions.Count > 0)
@@ -1739,45 +2147,17 @@ namespace X4LogWatcher
       )
         return;
 
-      // Get position and length
-      int startIndex = searchResultPositions[currentSearchPosition];
-      int length = txtFindText.Text.Length;
-
-      // Select the text in the TextBox to highlight it
-      TextBox contentBox = currentSearchTab.ContentTextBox;
-      contentBox.Focus();
-      contentBox.Select(startIndex, length);
-
-      // Ensure the highlighted text is visible by scrolling to its line
-      contentBox.ScrollToLine(GetLineIndexFromPosition(contentBox.Text, startIndex));
-
-      // Update status information in the status bar
+      // searchResultPositions holds line indices into the disk store
+      int lineIndex = searchResultPositions[currentSearchPosition];
+      currentSearchTab.ScrollToLine(lineIndex, txtFindText.Text, chkMatchCase.IsChecked == true, ContentFontFamily);
       UpdateSearchStatus();
     }
 
     private void ClearSearchHighlights()
     {
       if (currentSearchTab != null)
-      {
-        currentSearchTab.ContentTextBox.SelectionLength = 0;
-      }
-    }
-
-    // Helper method to get line index from character position
-    private static int GetLineIndexFromPosition(string text, int position)
-    {
-      int lineIndex = 0;
-      int currentPos = 0;
-
-      foreach (char c in text.Take(position))
-      {
-        if (c == '\n')
-          lineIndex++;
-
-        currentPos++;
-      }
-
-      return lineIndex;
+        currentSearchTab.ContentListBox.SelectedIndex = -1;
+      ActiveSearchTerm = string.Empty;
     }
 
     // Status bar methods
@@ -1918,16 +2298,91 @@ namespace X4LogWatcher
       PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
+    public FontFamily ContentFontFamily => AppConfig.UseMonospaceFont ? new FontFamily("Consolas") : SystemFonts.MessageFontFamily;
+
+    private string _activeSearchTerm = string.Empty;
+    public string ActiveSearchTerm
+    {
+      get => _activeSearchTerm;
+      private set
+      {
+        _activeSearchTerm = value;
+        OnPropertyChanged(nameof(ActiveSearchTerm));
+      }
+    }
+
+    private bool _searchMatchCase;
+    public bool SearchMatchCase
+    {
+      get => _searchMatchCase;
+      private set
+      {
+        _searchMatchCase = value;
+        OnPropertyChanged(nameof(SearchMatchCase));
+      }
+    }
+
     private void AppConfig_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
       if (e.PropertyName == nameof(Config.UseMonospaceFont))
-      {
-        var fontFamily = AppConfig.UseMonospaceFont ? new FontFamily("Consolas") : null;
-        foreach (var tab in tabs)
-        {
-          tab.ContentTextBox.FontFamily = fontFamily ?? SystemFonts.MessageFontFamily;
-        }
-      }
+        OnPropertyChanged(nameof(ContentFontFamily));
+    }
+
+    private DataTemplate CreateLineDataTemplate()
+    {
+      var ancestor = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.FindAncestor, typeof(MainWindow), 1);
+
+      // Single RichTextBox replaces the old TextBox+TextBlock overlay pair.
+      // It provides native text selection with no dual-rendering artefacts, and the
+      // FlowDocument populated by HighlightRichTextBox carries the search highlights.
+      // PART_ContentHost must be a ScrollViewer; OverridesDefaultStyle on it prevents
+      // MahApps's implicit ScrollViewer style from imposing a MinHeight.
+      var rtbScrollFactory = new FrameworkElementFactory(typeof(ScrollViewer));
+      rtbScrollFactory.Name = "PART_ContentHost";
+      rtbScrollFactory.SetValue(FrameworkElement.OverridesDefaultStyleProperty, true);
+      rtbScrollFactory.SetValue(Control.FocusableProperty, false);
+      rtbScrollFactory.SetValue(Control.PaddingProperty, new Thickness(0));
+      rtbScrollFactory.SetValue(ScrollViewer.HorizontalScrollBarVisibilityProperty, ScrollBarVisibility.Hidden);
+      rtbScrollFactory.SetValue(ScrollViewer.VerticalScrollBarVisibilityProperty, ScrollBarVisibility.Disabled);
+
+      var rtbTemplate = new ControlTemplate(typeof(RichTextBox));
+      rtbTemplate.VisualTree = rtbScrollFactory;
+
+      var rtbFactory = new FrameworkElementFactory(typeof(RichTextBox));
+      rtbFactory.SetValue(FrameworkElement.OverridesDefaultStyleProperty, true);
+      rtbFactory.SetValue(FrameworkElement.MinHeightProperty, 0.0);
+      rtbFactory.SetValue(Control.TemplateProperty, rtbTemplate);
+      rtbFactory.SetValue(RichTextBox.IsReadOnlyProperty, true);
+      rtbFactory.SetValue(RichTextBox.BackgroundProperty, Brushes.Transparent);
+      rtbFactory.SetValue(Control.BorderThicknessProperty, new Thickness(0));
+      rtbFactory.SetValue(Control.PaddingProperty, new Thickness(0));
+      rtbFactory.SetValue(Control.FocusVisualStyleProperty, null);
+      rtbFactory.SetValue(SpellCheck.IsEnabledProperty, false);
+      // Keep the manually-driven text selection visible even when the RichTextBox is not focused.
+      rtbFactory.SetValue(RichTextBox.IsInactiveSelectionHighlightEnabledProperty, true);
+      // Plain click + drag selects partial text within this one line (native RichTextBox
+      // behaviour).  Shift+click / Ctrl+click instead select whole rows in the ListBox — that
+      // is handled in RowRichTextBox_PreviewMouseLeftButtonDown, which suppresses the
+      // RichTextBox's own text-selection for those modifier clicks.
+      rtbFactory.AddHandler(
+        UIElement.PreviewMouseLeftButtonDownEvent,
+        new MouseButtonEventHandler(RowRichTextBox_PreviewMouseLeftButtonDown)
+      );
+      rtbFactory.SetBinding(HighlightRichTextBox.TextProperty, new System.Windows.Data.Binding(nameof(LineItem.Text)));
+      rtbFactory.SetBinding(
+        HighlightRichTextBox.SearchTermProperty,
+        new System.Windows.Data.Binding(nameof(ActiveSearchTerm)) { RelativeSource = ancestor }
+      );
+      rtbFactory.SetBinding(
+        HighlightRichTextBox.MatchCaseProperty,
+        new System.Windows.Data.Binding(nameof(SearchMatchCase)) { RelativeSource = ancestor }
+      );
+      rtbFactory.SetBinding(
+        RichTextBox.FontFamilyProperty,
+        new System.Windows.Data.Binding(nameof(ContentFontFamily)) { RelativeSource = ancestor }
+      );
+
+      return new DataTemplate { VisualTree = rtbFactory };
     }
 
     private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
