@@ -12,6 +12,7 @@ namespace X4LogWatcher
   public class Config : INotifyPropertyChanged
   {
     private static readonly int MaxRecentProfiles = 5;
+    private static readonly int MaxSearchHistory = 20;
     private bool _isSaving; // Flag to prevent recursive saves
 
     // Backing fields for properties
@@ -22,6 +23,7 @@ namespace X4LogWatcher
     private bool _skipSignatureErrors = true;
     private bool _realTimeStamping;
     private bool _useMonospaceFont;
+    private List<string> _searchHistory = [];
     private JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions { WriteIndented = true };
 
     // Properties with notification
@@ -65,6 +67,12 @@ namespace X4LogWatcher
     {
       get => _useMonospaceFont;
       set => SetProperty(ref _useMonospaceFont, value);
+    }
+
+    public List<string> SearchHistory
+    {
+      get => _searchHistory;
+      set => SetProperty(ref _searchHistory, value);
     }
 
     // Constructor to initialize the ObservableCollection
@@ -136,18 +144,9 @@ namespace X4LogWatcher
             config.ActiveProfile = tempConfig.ActiveProfile;
             config.LastLogFolderPath = tempConfig.LastLogFolderPath;
             config.LogFileExtension = tempConfig.LogFileExtension ?? ".log";
-            if (tempConfig.GetType().GetProperty(nameof(SkipSignatureErrors)) != null)
-            {
-              config.SkipSignatureErrors = tempConfig.SkipSignatureErrors;
-            }
-            if (tempConfig.GetType().GetProperty(nameof(RealTimeStamping)) != null)
-            {
-              config.RealTimeStamping = tempConfig.RealTimeStamping;
-            }
-            if (tempConfig.GetType().GetProperty(nameof(UseMonospaceFont)) != null)
-            {
-              config.UseMonospaceFont = tempConfig.UseMonospaceFont;
-            }
+            config.SkipSignatureErrors = tempConfig.SkipSignatureErrors;
+            config.RealTimeStamping = tempConfig.RealTimeStamping;
+            config.UseMonospaceFont = tempConfig.UseMonospaceFont;
             return config;
           }
         }
@@ -159,6 +158,16 @@ namespace X4LogWatcher
 
       // Return default config if loading fails
       return new Config();
+    }
+
+    public void AddSearchTerm(string term)
+    {
+      if (string.IsNullOrWhiteSpace(term))
+        return;
+      _searchHistory.Remove(term);
+      _searchHistory.Insert(0, term);
+      while (_searchHistory.Count > MaxSearchHistory)
+        _searchHistory.RemoveAt(_searchHistory.Count - 1);
     }
 
     // Add a profile to the recent list
