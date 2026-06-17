@@ -574,6 +574,8 @@ namespace X4LogWatcher
         VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
         HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
         FontFamily = AppConfig.UseMonospaceFont ? new FontFamily("Consolas") : SystemFonts.MessageFontFamily,
+        SelectionBrush = Brushes.Yellow,
+        SelectionTextBrush = Brushes.Black,
       };
 
       // Add Enter key handling for search navigation when content box has focus
@@ -588,7 +590,7 @@ namespace X4LogWatcher
       // Set up Apply button click handler using the TabInfo object
       btnApply.Click += (s, e) =>
       {
-        if (tabInfo.ValidateRegex() && tabInfo.IsWatchingEnabled && _currentLogFile != null)
+        if (tabInfo.UpdateRegex(showError: true) && tabInfo.IsWatchingEnabled && _currentLogFile != null)
         {
           // Reset file position to process from the beginning with new regex
           tabInfo.UpdateTabHeader();
@@ -604,7 +606,7 @@ namespace X4LogWatcher
       {
         if (s is CheckBox checkBox)
         {
-          if (tabInfo.ValidateRegex())
+          if (tabInfo.UpdateRegex(showError: true))
           {
             tabInfo.IsWatchingEnabled = true;
             tabInfo.UpdateTabHeader();
@@ -1576,19 +1578,18 @@ namespace X4LogWatcher
     // Find functionality methods
     private void ShowFindPanel()
     {
-      // Get active tab
       if (tabControl.SelectedItem is MetroTabItem selectedTabItem && selectedTabItem != addTabButton)
       {
-        // Show the find panel
         findPanel.Visibility = Visibility.Visible;
-
-        // Clear previous search results
         searchResultPositions.Clear();
         currentSearchPosition = -1;
 
-        // Focus the search text box
         txtFindText.Focus();
-        txtFindText.SelectAll();
+        Dispatcher.BeginInvoke(() =>
+        {
+          if (txtFindText.Template.FindName("PART_EditableTextBox", txtFindText) is TextBox tb)
+            tb.SelectAll();
+        });
       }
     }
 
@@ -1599,14 +1600,18 @@ namespace X4LogWatcher
       ClearSearchStatus();
     }
 
-    private void TxtFindText_TextChanged(object sender, TextChangedEventArgs e)
+    private void TxtFindText_Loaded(object sender, RoutedEventArgs e)
     {
-      // No longer perform immediate search on text change
-      if (string.IsNullOrEmpty(txtFindText.Text))
-      {
-        ClearSearchHighlights();
-        ClearSearchStatus();
-      }
+      txtFindText.ItemsSource = AppConfig.SearchHistory;
+      if (txtFindText.Template.FindName("PART_EditableTextBox", txtFindText) is TextBox tb)
+        tb.TextChanged += (_, _) =>
+        {
+          if (string.IsNullOrEmpty(txtFindText.Text))
+          {
+            ClearSearchHighlights();
+            ClearSearchStatus();
+          }
+        };
     }
 
     private void TxtFindText_KeyDown(object sender, KeyEventArgs e)
@@ -1675,6 +1680,10 @@ namespace X4LogWatcher
           // Get the text and search term
           string content = tabInfo.ContentTextBox.Text;
           string searchTerm = txtFindText.Text;
+
+          AppConfig.AddSearchTerm(searchTerm);
+          txtFindText.ItemsSource = null;
+          txtFindText.ItemsSource = AppConfig.SearchHistory;
 
           // Get comparison type based on match case checkbox
           StringComparison comparison = chkMatchCase.IsChecked == true ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;

@@ -263,9 +263,10 @@ namespace X4LogWatcher
     }
 
     /// <summary>
-    /// Updates the compiled regex when pattern changes
+    /// Updates the compiled regex from the TextBox. Pass showError=true to show a
+    /// MessageBox when the pattern is invalid (e.g. on explicit Apply/Enable).
     /// </summary>
-    public bool UpdateRegex()
+    public bool UpdateRegex(bool showError = false)
     {
       RegexPattern = RegexTextBox.Text;
 
@@ -275,27 +276,10 @@ namespace X4LogWatcher
         IsRegexValid = true;
         return true;
       }
-      catch
-      {
-        IsRegexValid = false;
-        return false;
-      }
-    }
-
-    /// <summary>
-    /// Validates the current regex pattern
-    /// </summary>
-    public bool ValidateRegex()
-    {
-      try
-      {
-        CompiledRegex = new Regex(RegexPattern);
-        IsRegexValid = true;
-        return true;
-      }
       catch (Exception ex)
       {
-        MessageBox.Show($"Invalid Regex: {ex.Message}", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        if (showError)
+          MessageBox.Show($"Invalid Regex: {ex.Message}", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Error);
         IsRegexValid = false;
         return false;
       }
