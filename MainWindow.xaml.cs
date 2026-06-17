@@ -241,6 +241,65 @@ namespace X4LogWatcher
       }
     }
 
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+      base.OnPreviewKeyDown(e);
+
+      if (e.Key == Key.PageUp || e.Key == Key.PageDown)
+      {
+        var activeTab = tabs.FirstOrDefault(t => t.TabItem == tabControl.SelectedItem);
+        var sv = FindScrollViewerInTab(activeTab);
+        if (sv != null)
+        {
+          if (Keyboard.Modifiers == ModifierKeys.None)
+          {
+            if (e.Key == Key.PageDown)
+              sv.PageDown();
+            else
+              sv.PageUp();
+            e.Handled = true;
+          }
+          else if (Keyboard.Modifiers == ModifierKeys.Control)
+          {
+            if (e.Key == Key.PageDown)
+              sv.ScrollToBottom();
+            else
+              sv.ScrollToTop();
+            e.Handled = true;
+          }
+        }
+      }
+    }
+
+    private static ScrollViewer? FindScrollViewerInTab(TabInfo? tab)
+    {
+      if (tab?.ContentTextBox == null)
+        return null;
+      for (int i = 0; i < VisualTreeHelper.GetChildrenCount(tab.ContentTextBox); i++)
+      {
+        if (VisualTreeHelper.GetChild(tab.ContentTextBox, i) is ScrollViewer sv)
+          return sv;
+        var found = FindScrollViewerInChild(VisualTreeHelper.GetChild(tab.ContentTextBox, i));
+        if (found != null)
+          return found;
+      }
+      return null;
+    }
+
+    private static ScrollViewer? FindScrollViewerInChild(DependencyObject parent)
+    {
+      for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+      {
+        var child = VisualTreeHelper.GetChild(parent, i);
+        if (child is ScrollViewer sv)
+          return sv;
+        var found = FindScrollViewerInChild(child);
+        if (found != null)
+          return found;
+      }
+      return null;
+    }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
       base.OnKeyDown(e);
@@ -574,8 +633,6 @@ namespace X4LogWatcher
         VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
         HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
         FontFamily = AppConfig.UseMonospaceFont ? new FontFamily("Consolas") : SystemFonts.MessageFontFamily,
-        SelectionBrush = Brushes.Yellow,
-        SelectionTextBrush = Brushes.Black,
       };
 
       // Add Enter key handling for search navigation when content box has focus
@@ -1584,11 +1641,17 @@ namespace X4LogWatcher
         searchResultPositions.Clear();
         currentSearchPosition = -1;
 
-        txtFindText.Focus();
+        var activeTab = tabs.FirstOrDefault(t => t.TabItem == tabControl.SelectedItem);
+        if (activeTab?.ContentTextBox?.SelectionLength > 0)
+          txtFindText.Text = activeTab.ContentTextBox.SelectedText;
+
         Dispatcher.BeginInvoke(() =>
         {
           if (txtFindText.Template.FindName("PART_EditableTextBox", txtFindText) is TextBox tb)
+          {
+            tb.Focus();
             tb.SelectAll();
+          }
         });
       }
     }
@@ -1684,6 +1747,7 @@ namespace X4LogWatcher
           AppConfig.AddSearchTerm(searchTerm);
           txtFindText.ItemsSource = null;
           txtFindText.ItemsSource = AppConfig.SearchHistory;
+          txtFindText.Text = searchTerm;
 
           // Get comparison type based on match case checkbox
           StringComparison comparison = chkMatchCase.IsChecked == true ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
