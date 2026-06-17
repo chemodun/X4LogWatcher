@@ -18,6 +18,7 @@ namespace X4LogWatcher
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private bool _disposed;
+    private bool _shouldFollowBottom = true;
 
     private string _regexPattern = string.Empty;
     public string RegexPattern
@@ -182,9 +183,6 @@ namespace X4LogWatcher
 
       // Initialize tab header
       UpdateTabHeader();
-
-      // Set up scroll detection for smart auto-scrolling
-      SetupScrollDetection();
     }
 
     protected void OnPropertyChanged(string propertyName)
@@ -298,25 +296,15 @@ namespace X4LogWatcher
       if (_disposed)
         return;
 
-      // Check if user was at the bottom before adding content
-      bool wasAtBottom = IsUserAtBottom();
-      bool isTabFocused = IsTabCurrentlyFocused();
-
       ContentTextBox.AppendText(text);
 
-      // Only auto-scroll if user was already at the bottom or this tab is not currently focused
-      if (wasAtBottom || !isTabFocused)
+      if (_shouldFollowBottom)
       {
         ContentTextBox.ScrollToEnd();
       }
-      else
+      else if (!IsTabCurrentlyFocused() && !HasNewContent)
       {
-        // User is scrolled up and tab is focused - indicate new content arrived
-        // This will make the tab header show the "new content" indicator
-        if (!HasNewContent)
-        {
-          SetHasNewContent(true);
-        }
+        SetHasNewContent(true);
       }
     }
 
@@ -377,28 +365,22 @@ namespace X4LogWatcher
     private bool IsUserAtBottom()
     {
       if (_disposed || ContentTextBox == null)
-        return true; // Default to true to maintain existing behavior
+        return _shouldFollowBottom;
 
       try
       {
-        // Find the ScrollViewer inside the TextBox
         var scrollViewer = FindScrollViewer(ContentTextBox);
         if (scrollViewer != null)
         {
-          var verticalOffset = scrollViewer.VerticalOffset;
-          var scrollableHeight = scrollViewer.ScrollableHeight;
-
-          // Consider "at bottom" if within a small tolerance (a few pixels)
           const double tolerance = 5.0;
-          return Math.Abs(verticalOffset - scrollableHeight) <= tolerance;
+          return Math.Abs(scrollViewer.VerticalOffset - scrollViewer.ScrollableHeight) <= tolerance;
         }
 
-        // Fallback: check if caret is at the end
-        return ContentTextBox.CaretIndex == ContentTextBox.Text.Length;
+        return _shouldFollowBottom;
       }
       catch
       {
-        return true; // Default to true if we can't determine scroll position
+        return _shouldFollowBottom;
       }
     }
 
@@ -502,16 +484,20 @@ namespace X4LogWatcher
 
       try
       {
-        // If user scrolled to bottom and we have new content indicator, clear it
-        if (HasNewContent && IsUserAtBottom())
-        {
+        _shouldFollowBottom = IsUserAtBottom();
+        if (HasNewContent && _shouldFollowBottom)
           SetHasNewContent(false);
-        }
       }
       catch (Exception ex)
       {
         System.Diagnostics.Debug.WriteLine($"Error in scroll change handler for tab '{TabName}': {ex.Message}");
       }
+    }
+
+    public void RestoreScrollIfFollowing()
+    {
+      if (_shouldFollowBottom)
+        ContentTextBox.ScrollToEnd();
     }
 
     #region IDisposable Implementation

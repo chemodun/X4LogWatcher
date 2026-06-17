@@ -234,10 +234,9 @@ namespace X4LogWatcher
     {
       if (e.AddedItems.Count > 0 && e.AddedItems[0] is MetroTabItem selectedItem && selectedItem != addTabButton)
       {
-        // Find the TabInfo corresponding to the selected tab
         var selectedTabInfo = tabs.FirstOrDefault(t => t.TabItem == selectedItem);
-        // Reset the new content indicator when a tab is selected
         selectedTabInfo?.SetHasNewContent(false);
+        selectedTabInfo?.RestoreScrollIfFollowing();
       }
     }
 
@@ -643,6 +642,12 @@ namespace X4LogWatcher
       // Create and store TabInfo object
       var tabInfo = new TabInfo(tabItem, chkEnable, txtName, txtRegex, numAfterLines, txtContent, isAutoCreated);
       tabs.Add(tabInfo);
+
+      txtContent.Loaded += (_, _) =>
+      {
+        tabInfo.SetupScrollDetection();
+        tabInfo.RestoreScrollIfFollowing();
+      };
 
       // Set up Apply button click handler using the TabInfo object
       btnApply.Click += (s, e) =>
