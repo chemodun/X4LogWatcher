@@ -182,6 +182,20 @@ namespace X4LogWatcher
       }
     }
 
+    // Path of the currently loaded/saved profile, used by the direct "Save Profile" menu item
+    private string? _loadedProfilePath;
+    private string? LoadedProfilePath
+    {
+      get => _loadedProfilePath;
+      set
+      {
+        _loadedProfilePath = value;
+        OnPropertyChanged(nameof(CanSaveProfile));
+      }
+    }
+
+    public bool CanSaveProfile => _loadedProfilePath != null;
+
     // Search functionality
     private int currentSearchPosition = -1;
     private readonly List<int> searchResultPositions = [];
@@ -869,6 +883,7 @@ namespace X4LogWatcher
       // Update recent profiles
       AppConfig.AddRecentProfile(profilePath);
       UpdateRecentProfilesMenu();
+      LoadedProfilePath = profilePath;
     }
 
     // Method to update the Recent Profiles menu items
@@ -880,6 +895,7 @@ namespace X4LogWatcher
         var item = menuProfile.Items[i];
         if (
           item is MenuItem menuItem
+          && menuItem != menuSaveProfileQuick
           && menuItem != menuSaveProfile
           && menuItem != menuLoadProfile
           && menuItem != menuRecentProfilesHeader
@@ -1476,12 +1492,30 @@ namespace X4LogWatcher
       }
     }
 
+    private void MenuSaveProfileQuick_Click(object sender, RoutedEventArgs e)
+    {
+      if (LoadedProfilePath == null)
+        return;
+
+      var result = MessageBox.Show(
+        $"Overwrite profile '{Path.GetFileName(LoadedProfilePath)}'?",
+        "Save Profile",
+        MessageBoxButton.YesNo,
+        MessageBoxImage.Question
+      );
+      if (result != MessageBoxResult.Yes)
+        return;
+
+      SaveProfile(LoadedProfilePath);
+      MessageBox.Show("Profile saved successfully.", "Save Profile", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
     private void MenuSaveProfile_Click(object sender, RoutedEventArgs e)
     {
       SaveFileDialog saveDialog = new()
       {
         Filter = "Profile files (*.profile)|*.profile|All files (*.*)|*.*",
-        Title = "Save Profile",
+        Title = "Save Profile As",
         DefaultExt = "profile",
       };
 
@@ -1491,6 +1525,7 @@ namespace X4LogWatcher
         // Update recent profiles list
         AppConfig.AddRecentProfile(saveDialog.FileName);
         UpdateRecentProfilesMenu();
+        LoadedProfilePath = saveDialog.FileName;
 
         MessageBox.Show("Profile saved successfully.", "Save Profile", MessageBoxButton.OK, MessageBoxImage.Information);
       }
