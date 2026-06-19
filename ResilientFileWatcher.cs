@@ -125,8 +125,7 @@ namespace X4LogWatcher
     private bool IsDuplicate(ConcurrentDictionary<string, DateTime> dict, string path)
     {
       var now = DateTime.UtcNow;
-      var last = dict.GetOrAdd(path, now);
-      if ((now - last).TotalMilliseconds < _debounceMs)
+      if (dict.TryGetValue(path, out var last) && (now - last).TotalMilliseconds < _debounceMs)
         return true;
 
       dict[path] = now;

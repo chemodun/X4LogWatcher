@@ -439,6 +439,12 @@ namespace X4LogWatcher
       );
     }
 
+    private bool IsMostRecentLogFile(string filePath)
+    {
+      return _currentLogFolder != null
+        && string.Equals(FindMostRecentLogFile(_currentLogFolder), filePath, StringComparison.OrdinalIgnoreCase);
+    }
+
     private void OnFolderFileCreated(object sender, FileSystemEventArgs e)
     {
       try
@@ -451,10 +457,11 @@ namespace X4LogWatcher
           // Wait a moment for the file to be accessible
           System.Threading.Thread.Sleep(500);
 
-          // Switch to monitoring the new file since it's just been created
+          // Switch to monitoring the new file only if it's actually the most recently changed log file
           Dispatcher.Invoke(() =>
           {
-            StartWatching(e.FullPath, true);
+            if (CurrentLogFile != e.FullPath && IsMostRecentLogFile(e.FullPath))
+              StartWatching(e.FullPath, true);
           });
         }
       }
@@ -478,7 +485,7 @@ namespace X4LogWatcher
               // Already watching this file, no action needed
               OnSingleFileChanged(sender, e);
             }
-            else
+            else if (IsMostRecentLogFile(e.FullPath))
             {
               StartWatching(e.FullPath, true);
             }
@@ -1601,6 +1608,21 @@ namespace X4LogWatcher
     // Timer tick handler for forced refresh
     private void OnForcedRefreshTimerTick(object? sender, EventArgs e)
     {
+      // In folder watch mode, also check if a newer log file has appeared,
+      // since the regular check below only tracks the currently selected file.
+      if (IsWatchingFolder && _currentLogFolder != null)
+      {
+        string? mostRecentLogFile = FindMostRecentLogFile(_currentLogFolder);
+        if (mostRecentLogFile != null && !string.Equals(mostRecentLogFile, _currentLogFile, StringComparison.OrdinalIgnoreCase))
+        {
+          StartWatching(mostRecentLogFile, true);
+          var newFileInfo = new FileInfo(mostRecentLogFile);
+          lastModifiedTime = newFileInfo.LastWriteTime;
+          lastFileSize = newFileInfo.Length;
+          return;
+        }
+      }
+
       if (_currentLogFile == null || !File.Exists(_currentLogFile))
       {
         // File no longer exists, stop the timer
