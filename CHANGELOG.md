@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.9.0](https://github.com/chemodun/X4LogWatcher/compare/v0.8.0...v0.9.0) (2026-06-24)
+
+
+### Features
+
+* **Config:** add session search history ([7ec0b80](https://github.com/chemodun/X4LogWatcher/commit/7ec0b809b3c9b21953f79c078dfa1fbca43ddab0))
+* **Config:** add UseMonospaceFont property ([8d90e78](https://github.com/chemodun/X4LogWatcher/commit/8d90e785b7fa40ff4ace92a77fab6b39f01250f6))
+* **MainWindow:** add keyboard navigation for tab content ([cfa8eb2](https://github.com/chemodun/X4LogWatcher/commit/cfa8eb263864cf8f8ba8aeb316c88fa93ef6a587))
+* **MainWindow:** add log file monitoring for most recent log ([f10adce](https://github.com/chemodun/X4LogWatcher/commit/f10adced3896b176a70d4ad4ea218d9ad67c8c2f))
+* **MainWindow:** add quick save profile functionality ([b849fba](https://github.com/chemodun/X4LogWatcher/commit/b849fba6345a708b5cffb1c638d54f53c0641537))
+* **MainWindow:** integrate monospace font option ([8d90e78](https://github.com/chemodun/X4LogWatcher/commit/8d90e785b7fa40ff4ace92a77fab6b39f01250f6))
+* **MainWindow:** replace TextBox with ComboBox for search input ([e3e7bd6](https://github.com/chemodun/X4LogWatcher/commit/e3e7bd60b22259bc0aa63bc044b64967b675f889))
+
+
+### Bug Fixes
+
+* **MainWindow:** replace FileSystemWatcher with ResilientFileWatcher ([e4663ee](https://github.com/chemodun/X4LogWatcher/commit/e4663ee554b989e9648a784415da9a6a498bbce9))
+* **ResilientFileWatcher:** add resilient file watching capabilities ([e4663ee](https://github.com/chemodun/X4LogWatcher/commit/e4663ee554b989e9648a784415da9a6a498bbce9))
+* **ResilientFileWatcher:** improve debounce logic for file changes ([f10adce](https://github.com/chemodun/X4LogWatcher/commit/f10adced3896b176a70d4ad4ea218d9ad67c8c2f))
+
+
+### Code Refactoring
+
+* **TabInfo:** enhance scroll behavior and content detection ([9c647b5](https://github.com/chemodun/X4LogWatcher/commit/9c647b558bc5a34ef6db1eae37bf1f5f70286373))
+
+
+### Miscellaneous Chores
+
+* update dot-folder exclusion rules in ignore files ([e2f89be](https://github.com/chemodun/X4LogWatcher/commit/e2f89bedc2b1be980f11e1e449376f30df128c60))
+
+
+### Documentation
+
+* **README:** update features and changelog for new functionalities ([1e4eb21](https://github.com/chemodun/X4LogWatcher/commit/1e4eb21e0ae02124c4b9323080301acad9ee82f5))
+
 ## [0.8.0](https://github.com/chemodun/X4LogWatcher/compare/v0.7.1...v0.8.0) (2025-07-19)
 
 
