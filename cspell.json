@@ -17,6 +17,7 @@
         "logwatcher",
         "softprops",
         "Subdirs",
+        "toggleable",
         "toshibdib",
         "tzip"
     ],

@@ -9,18 +9,21 @@ X4 Log Watcher is a simple tool to monitor the log files of X4: Foundations. It 
 - Multi-tabbed interface for filtering the same log file
 - Enable/disable filters on the fly per each tab
 - Watch not only the exact log file but also the parent directory to reload the log file when new log files are created
-- Support profiles saving and loading - i.e. current tabs with filters
+- Support profiles saving and loading - i.e. current tabs with filters, including a quick "Save Profile" option to save directly to the currently loaded profile file, in addition to "Save Profile As..."
 - Offline mode - i.e. load the log file from disk and parse it
 - Loading default profile on startup
-- Support a "Forced refresh" mode, if by some reason standard Windows file watcher doesn't work
-- Support simple text search in current filtered content via Ctrl+F and F3(Enter)/Shift+F3 for next/previous search result
+- Support a "Forced refresh" mode, if by some reason standard Windows file watcher doesn't work. In folder watch mode, it also detects newer log files appearing in the folder
+- Support simple text search in current filtered content via Ctrl+F and F3(Enter)/Shift+F3 for next/previous search result, with a session search history dropdown for quickly reusing recent search terms
 - Has a status bar with the current log file name and it's stats. Additionally shows the loading progress of the log file in the offline mode
 - Shows the updates in non-focused tabs via "bolding" and adding the notification symbol "🔔" to the tab name
 - Extension for the log file is configurable via editing of the config file. By default, it is set to `.log`
 - Has option to skip the signature related errors in the log file. By default, it is set to `true`
 - Has option to add "real" timestamp to the filtered content. By default, it is set to `false`
+- Has option to use a monospace font for the log content view, toggleable from the menu
 - Supports AutoTabs feature - automatically create tabs based on the appropriate regex pattern from log file content
 - Supports multi-lined log entries, allowing the tool to handle log entries that span multiple lines
+- Keyboard navigation: PageUp/PageDown and Ctrl+PageUp/Ctrl+PageDown scroll the active tab's content regardless of which control has focus
+- Smart scroll-follow: switching tabs preserves each tab's scroll position - tabs you'd scrolled up in stay put, tabs you were following jump back to the latest content
 
 ## Requirements
 
@@ -112,6 +115,23 @@ In some cases too many tabs can fill a whole window of a tool. There is limitati
 - There is a topic on the [Egosoft forum](https://forum.egosoft.com/viewtopic.php?t=470624), related to this tool.
 
 ## Changelog
+
+### [0.9.0] - 2026-06-20
+
+- Added:
+  - "Save Profile" menu item for quick, dialog-free saves to the currently loaded profile file (in addition to "Save Profile As..."), with a confirmation prompt before overwriting.
+  - Search history in the Find panel (Ctrl+F) - recent search terms are remembered in a dropdown for the current session.
+  - Monospace font option, toggleable from the menu, for the log content view.
+  - Keyboard navigation: PageUp/PageDown and Ctrl+PageUp/Ctrl+PageDown now scroll the active tab's content regardless of which control has focus.
+  - Smart scroll-follow: switching tabs now preserves each tab's scroll position - tabs you'd scrolled up in stay put, tabs you were following jump back to the latest content.
+
+- Changed:
+  - Find input is now an editable dropdown (was a plain text box), pre-filled with any selected text when opening the panel.
+  - Folder watching and Forced refresh now only switch the active log file when it's genuinely the most recently modified one in the folder, avoiding spurious switches triggered by stale or out-of-order file events.
+  - Replaced the underlying file watcher with a more resilient implementation that automatically recovers from watcher errors.
+
+- Fixed:
+  - New log files appearing in a watched folder could intermittently go undetected due to a debounce bug that dropped the first file-system event for any new file.
 
 ### [0.8.0] - 2025-07-20
 
